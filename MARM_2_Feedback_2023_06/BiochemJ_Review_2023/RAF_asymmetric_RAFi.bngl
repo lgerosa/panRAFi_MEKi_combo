@@ -1,0 +1,96 @@
+begin model
+begin parameters
+  R_0             0.01
+  I1_0            0
+  I2_0            0
+  kr_1            10
+  kf_1            1
+  phi_1           1
+  kr_2a           0.10000000000000001
+  kf_2a           1
+  phi_2a          1
+  kr_2b           0.10000000000000001
+  kf_2b           1
+  phi_2b          1
+  f_a             1
+  f_b             1
+  g_1a            1
+  g_1b            1
+  g_2a            1
+  g_2b            1
+  g_3a            1
+  g_3b            1
+  kcat            1
+  plambda         10
+  p1              0.5
+  p2              0.5
+  Kd_1            kr_1/kf_1
+  Gf_1            ln(kr_1/kf_1)
+  Ea0_1           -ln(kf_1) - phi_1*ln(kr_1/kf_1)
+  Kd_2a           kr_2a/kf_2a
+  Gf_2a           ln(kr_2a/kf_2a)
+  Ea0_2a          -ln(kf_2a) - phi_2a*ln(kr_2a/kf_2a)
+  Kd_2b           kr_2b/kf_2b
+  Gf_2b           ln(kr_2b/kf_2b)
+  Ea0_2b          -ln(kf_2b) - phi_2b*ln(kr_2b/kf_2b)
+  Gf_fa           ln(f_a)
+  Gf_fb           ln(f_b)
+  Gf_g1a          ln(g_1a)
+  Gf_g1b          ln(g_1b)
+  Gf_g2a          ln(g_2a)
+  Gf_g2b          ln(g_2b)
+  Gf_g3a          ln(g_3a)
+  Gf_g3b          ln(g_3b)
+  Gf_g1a_fa       Gf_fa + Gf_g1a
+  Gf_g1b_fb       Gf_fb + Gf_g1b
+  Gf_g2a_g1a_fa   Gf_fa + Gf_g1a + Gf_g2a
+  Gf_g2b_g1b_fb   Gf_fb + Gf_g1b + Gf_g2b
+  Gf_g3a_g1b_fb   Gf_fb + Gf_g1b + Gf_g3a
+  Gf_g3b_g1a_fa   Gf_fa + Gf_g1a + Gf_g3b
+end parameters
+
+begin molecule types
+  R(r,i,state~none~R1~R2)
+  I1(r)
+  I2(r)
+end molecule types
+
+begin observables
+  Species R_obs       R(r,i)
+  Species RR_obs      R(r!1,i).R(r!1,i)
+  Species R1R2I_obs   R(r!1,i!+,state~R1).R(r!1,i,state~R2)
+  Species R2R1I_obs   R(r!1,i!+,state~R2).R(r!1,i,state~R1)
+  Species IRRI_obs    R(r!1,i!+).R(r!1,i!+)
+end observables
+
+begin functions
+  R_active()   ((R1R2I_obs*p1 + R2R1I_obs*p2 + RR_obs)*plambda + R_obs)*kcat
+end functions
+
+begin species
+  R(r,i,state~none)   R_0
+  I1(r)               I1_0
+  I2(r)               I2_0
+end species
+
+begin energy patterns
+  ep_1:            R(r!1).R(r!1)    Gf_1
+  ep_2a:           R(i!1).I1(r!1)    Gf_2a
+  ep_3:            R(i!1).I2(r!1)    Gf_2b
+  ep_fa_R2R1I1:    R(r!1,i,state~R2).R(r!1,i!2,state~R1).I1(r!2)    Gf_fa
+  ep_fb_R2R1I2:    R(r!1,i,state~R2).R(r!1,i!2,state~R1).I2(r!2)    Gf_fb
+  ep_g1a_R1R2I1:   R(r!1,i,state~R1).R(r!1,i!2,state~R2).I1(r!2)    Gf_g1a_fa
+  ep_g1b_R1R2I2:   R(r!1,i,state~R1).R(r!1,i!2,state~R2).I2(r!2)    Gf_g1b_fb
+  ep_g2a_I1R1R2I1:  I1(r!3).R(r!1,i!3,state~R1).R(r!1,i!2,state~R2).I1(r!2)    Gf_g2a_g1a_fa
+  ep_g2b_I2R1R2I2:  I2(r!3).R(r!1,i!3,state~R1).R(r!1,i!2,state~R2).I2(r!2)    Gf_g2b_g1b_fb
+  ep_g3a_I1R1R2I2:  I2(r!3).R(r!1,i!3,state~R2).R(r!1,i!2,state~R1).I1(r!2)    Gf_g3a_g1b_fb
+  ep_g3b_I2R1R2I1:  I1(r!3).R(r!1,i!3,state~R2).R(r!1,i!2,state~R1).I2(r!2)    Gf_g3b_g1a_fa
+end energy patterns
+
+begin reaction rules
+  R1:   R(r,state~none) + R(r,state~none) <-> R(r!1,state~R1).R(r!1,state~R2)    Arrhenius(phi_1, Ea0_1)
+  R2a:  R(i) + I1(r) <-> R(i!1).I1(r!1)    Arrhenius(phi_2a, Ea0_2a)
+  R2b:  R(i) + I2(r) <-> R(i!1).I2(r!1)    Arrhenius(phi_2b, Ea0_2b)
+end reaction rules
+
+end model

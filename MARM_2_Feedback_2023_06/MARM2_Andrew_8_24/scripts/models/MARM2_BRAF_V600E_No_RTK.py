@@ -1,4 +1,4 @@
-# exported from PySB model 'RTKERK__base'
+# BRAF V600E fit MARM2 manually curated to remove Signaling upstream of RAF (e.g. EGFR, SOS, RAS)
 
 from pysb import Model, Monomer, Parameter, Expression, Compartment, Rule, Observable, Initial, MatchOnce, Annotation, EnergyPattern, ANY, WILD, as_complex_pattern
 from sympy import exp, log
@@ -137,10 +137,6 @@ Parameter('pMEK_IF_scale', 51.61451033036138)
 Parameter('pMEK_IF_offset', 0.096961641226767)
 Parameter('pERK_IF_scale', 1.9005626697169409)
 Parameter('pERK_IF_offset', 0.081048230598595)
-# (Andrew) added NRAS_Q61mut and Q61_RAS_GTP_kat parameters
-#Parameter('NRAS_Q61mut', 1.0)
-#Parameter('q61_RAS_gtp_kcat', 0.01)
-#Parameter('q61_RAS_gtp_kcat', 100)
 
 #Expression('Ea0_bind_RASgtp_BRAF', -bind_RASgtp_RAF_phi*bind_RASgtp_RAF_dG - log(bind_RASgtp_RAF_kf))
 #Expression('Ea0_bind_RASgtp_CRAF', -bind_RASgtp_RAF_phi*bind_RASgtp_RAF_dG - log(bind_RASgtp_RAF_kf))
@@ -178,8 +174,6 @@ Expression('catalyze_phosphatase_CRAF_uS642_kcat', catalyze_pERK_CRAF_pS642_kcat
 Expression('catalyze_phosphatase_BRAF_uT753_kcat', catalyze_pERK_BRAF_pT753_kcat*catalyze_phosphatase_BRAF_uT753_kcatr)
 #Expression('catalyze_phosphatase_SOS1_uS1134_kcat', catalyze_pERK_SOS1_pS1134_kcat*catalyze_phosphatase_SOS1_uS1134_kcatr)
 #Expression('catalyze_NF1_RAS_gdp_kcat', catalyze_NF1_RAS_gdp_kcatr*catalyze_SOS1_RAS_gtp_kcat)
-# (Andrew) add NRAS_mut_activation for NRAS_Q61mut
-#Expression('NRAS_mut_activation', NRAS_Q61mut * q61_RAS_gtp_kcat)
 Expression('initBRAF', 1000000.0*BRAF_0/(N_Avogadro*volume))
 Expression('initCRAF', 1000000.0*CRAF_0/(N_Avogadro*volume))
 #Expression('initRAS', 1000000.0*RAS_0/(N_Avogadro*volume))
@@ -323,14 +317,10 @@ Rule('basal_degradation_pDUSP', DUSP() >> None, psynthesize_pERK_DUSP_kdeg, dele
 #Rule('basal_degradation_mSPRY', mSPRY() >> None, msynthesize_pERK_SPRY_kdeg, delete_molecules=True)
 #Rule('synthesis_pSPRY', mSPRY() ** CP >> mSPRY() ** CP + SPRY(SH3m=None) ** CP, psynthesize_pERK_SPRY_ksyn)
 #Rule('basal_degradation_pSPRY', SPRY() >> None, psynthesize_pERK_SPRY_kdeg, delete_molecules=True)
-# (Andrew)
 #Rule('SOS1_is_dephosphorylated', SOS1(S1134='p') >> SOS1(S1134='u'), catalyze_phosphatase_SOS1_uS1134_kcat)
 #Rule('GRB2_and_SOS1_bind_and_dissociate', GRB2(SH3=None) + SOS1(SH3m=None) | GRB2(SH3=1) % SOS1(SH3m=1), bind_GRB2_SOS1_phi, Ea0_bind_GRB2_SOS1, energy=True)
-# (Andrew)
 #Rule('SOS1_is_phosphorylated', SOS1(S1134='u') >> SOS1(S1134='p'), catalyze_pERK_SOS1_pS1134_kbase)
-# (Andrew) REMOVE AFTER TEST
 #Rule('pERK_phosphorylates_SOS1', ERK(phospho='p') + SOS1(S1134='u') >> ERK(phospho='p') + SOS1(S1134='p'), catalyze_pERK_SOS1_pS1134_kcat)
-# (Andrew) REMOVE AFTER TEST
 Rule('pERK_phosphorylates_CRAF', ERK(phospho='p') + CRAF(S642='u', raf=None) >> ERK(phospho='p') + CRAF(S642='p', raf=None), catalyze_pERK_CRAF_pS642_kcat)
 Rule('CRAF_is_dephosphorylated', CRAF(S642='p', raf=None) >> CRAF(S642='u', raf=None), catalyze_phosphatase_CRAF_uS642_kcat)
 Rule('pERK_phosphorylates_BRAF', ERK(phospho='p') + BRAF(T753='u', raf=None) >> ERK(phospho='p') + BRAF(T753='p', raf=None), catalyze_pERK_BRAF_pT753_kcat)
@@ -340,8 +330,6 @@ Rule('BRAF_is_dephosphorylated', BRAF(T753='p', raf=None) >> BRAF(T753='u', raf=
 #Rule('uSOS1_binds_RASgdp', SOS1(S1134='u', ras=None) + RAS(sos1=None, state='gdp') >> SOS1(S1134='u', ras=2) % RAS(sos1=2, state='gdp'), bind_SOS1_RAS_kf)
 #Rule('SOS1_dissociates_from_RAS', SOS1(ras=1) % RAS(sos1=1) >> SOS1(ras=None) + RAS(sos1=None), bind_SOS1_RAS_kr)
 #Rule('SOS1_catalyzes_RAS_guanosine_exchange', SOS1(ras=1) % RAS(sos1=1, state='gdp') >> SOS1(ras=None) + RAS(sos1=None, state='gtp'), catalyze_SOS1_RAS_gtp_kcat)
-# (Andrew) added basal hydrolysis for NRAS_Q61 mutant
-#Rule('mutated_RAS_guanosine_exchange',RAS(sos1=None, state='gdp') >> RAS(sos1=None, state='gtp'),NRAS_mut_activation)
 #Rule('RAS_hydrolysis_GTP', RAS(raf=None, state='gtp') >> RAS(raf=None, state='gdp'), catalyze_NF1_RAS_gdp_kcat)
 #Rule('GTP_hydrolysis_dissociates_BRAF_from_RAS', RAS(raf=1, state='gtp') % BRAF(RBD=1) >> RAS(raf=None, state='gdp') + BRAF(RBD=None), catalyze_NF1_RAS_gdp_kcat)
 #Rule('GTP_hydrolysis_dissociates_CRAF_from_RAS', RAS(raf=1, state='gtp') % CRAF(RBD=1) >> RAS(raf=None, state='gdp') + CRAF(RBD=None), catalyze_NF1_RAS_gdp_kcat)

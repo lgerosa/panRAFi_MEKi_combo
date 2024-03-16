@@ -23,7 +23,18 @@ figures_dir='figures'
 ### Load drug screen data ###
 sa <- readRDS(file.path(cwd, data_dir, 'Drug_screen', 'Drug_screen_Belva_Cobi_sa_metrics.RDS'))
 combo <- readRDS(file.path(cwd, data_dir, 'Drug_screen', 'Drug_screen_Belva_Cobi_combo_metrics.RDS'))
+#prepare annotations of mutations
 anno <- readRDS(file.path(cwd, data_dir, 'Drug_screen', 'Drug_screen_cell_line_annotations.RDS'))
+#prepare annotations for plotting
+anno_hm <- anno
+rownames(anno_hm) <-anno_hm$CellLineName
+anno_hm <- dplyr::select(anno_hm, -c('CellLineName'))
+#define colors
+col_anno <- list()
+col_anno$NRAS_mut <- c(yes='black', no='white')
+col_anno$BRAF_mut <- c(yes='black', no='white')
+
+
 
 ### Prompt dataset information ###
 message('Cell lines: ', length(unique(sa$CellLineName)))
@@ -32,19 +43,79 @@ message('Drug combos: ', nrow(unique(dplyr::select(combo$RawTreated, c('DrugName
 
 ### Generate figures ###
 
+#decide which metrics to plot
+gtf <- list()
+gtf$long <- 'RelativeViability' # 'GRvalue')
+gtf$short <- 'RV' #'GR'
+
+#quantity used as quantification of drug effects 
+aqm <- c('%s_gDR_xc50', '%s_gDR_x_max', '%s_gDR_x_mean')
+for (i in 1:length(aqm)){
+  aqm[i] <- sprintf(aqm[i], gtf$short)
+}
+#name plot for quantification of drug effects
+aqmlab <-c('IC50_uM', 'E_max', 'AUC')
+#scale of y axis
+qmfunc <- c(log10, identity, identity)
+p <- list()
+for (i in 1:length(aqm)) {
+  
+  #order according to mutations 
+  #add annotation mutations for sorting
+  sa_mut <- merge(sa, anno , by='CellLineName')
+  sa_mut <- data.table::setorderv(sa_mut, c('BRAF_mut', "NRAS_mut",  aqm[i]))
+
+  #extract metrics to plot in matrix format
+  sa_mat <- data.table::dcast(sa_mut, 
+                                  factor(CellLineName, levels =unique(CellLineName)) ~  factor(DrugNamePlot), 
+                                  value.var = aqm[i])
+  #make it a data.frame or pheatmap messes up annotations
+  sa_mat <- as.data.frame(sa_mat)
+  rownames(sa_mat)<- sa_mat$CellLineName
+  sa_mat <- dplyr::select(sa_mat, -c('CellLineName'))
+  #remove columns and rows that are all NAN
+  sa_mat <- sa_mat[, !apply(is.na(sa_mat), 2, all)]
+  sa_mat <- sa_mat[!apply(is.na(sa_mat), 1, all), ]
+  #convert to right scale
+  sa_mat[] <- lapply(sa_mat, function(x) qmfunc[[i]](x))
+  
+  #flip 
+  t_sa_mat <- data.table::transpose(sa_mat)
+  # get row and colnames in order
+  colnames(t_sa_mat) <- rownames(sa_mat)
+  rownames(t_sa_mat) <- colnames(sa_mat)
+  
+  #plot heatmap
+  breaks <- seq(from=min(na.omit(sa_mat)), to=1.0, length.out=50)
+  hmcol <- rev(colorRampPalette(c("firebrick2", "white" ))(51))
+  p[[i]]<- pheatmap::pheatmap(t_sa_mat, scale="none", display_numbers = TRUE, fontsize_number=4, number_color = "black",
+                              color=rev(hmcol), breaks= breaks, na_col = "white", angle_col = 90, fontsize=6,
+                              treeheight_row = 30, treeheight_col = 30,
+                              cluster_rows = F,
+                              cluster_cols = F,
+                              annotation_col= anno_hm,
+                              annotation_colors= col_anno,
+                              main= paste(aqmlab[i], gtf$long)
+  )
+  #dev.off()
+}  
+
+#save heatmaps
+file_res <- sprintf('sa_metrics_Heatmaps_%s.pdf', gtf$short)
+pdf(file.path(cwd, figures_dir, 'Drug_screen' ,file_res), width=10, height= 3)  
+for (i in 1:length(p)){
+  print(p[[i]])
+  if (i < length(p))
+    grid::grid.newpage()
+}  
+dev.off() 
+
+
+
+### THE CODE NEEDS TO BE UDPDATE FROM HERE ONE BY LUCA
 
 #### LOAD ANNOTATION INFORMATION FOR CELL LINES
-CL_anno <- readRDS(file.path(cwd, data_dir, clines_dir, 'CL_anno.RDS'))
 #add mutation information 
-CL_ann_sa_mut <- unique(dplyr::select(dt_QCS_sa_metrics, c('CellLineName', 'clid')))
-CL_ann_sa_mut <- merge(CL_ann_sa_mut, CL_anno$CL_mut, by= 'clid', all.x=T)
-CL_ann_sa_mut[is.na(CL_ann_sa_mut)] <- "no"
-
-#add RAS_RAF_WT manually
-#idx <- apply(CL_ann_sa_mut, 1, function(x) any(x %in% "yes")) 
-#CL_ann_sa_mut$RASRAF_wt <- 'yes'
-#CL_ann_sa_mut[idx, c('RASRAF_wt')] <- "no"  
-#CL_anno$col_anno_CL_mut$RASRAF_wt <- CL_anno$col_anno_CL_mut$RAS_mut
 
 #add zygosity information 
 CL_ann_sa_zygo <- unique(dplyr::select(dt_QCS_sa_metrics, c('CellLineName', 'clid')))

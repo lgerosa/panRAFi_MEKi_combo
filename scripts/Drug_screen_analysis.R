@@ -1,3 +1,6 @@
+# Genentech Inc
+# by Luca Gerosa and Andrew Goetz
+#
 #analyse the RAF/MEK screen:
 #1. Plot SA response metrics with annotated mutations and lineage of cell lines
 #2. Plot drug combo response metrics with annotated mutations and lineage of cell lines
@@ -20,7 +23,8 @@ results_dir = 'results'
 figures_dir='figures'
 
 
-### Load drug screen data ###
+### LOAD DATA ###
+
 sa <- readRDS(file.path(cwd, data_dir, 'Drug_screen', 'Drug_screen_Belva_Cobi_sa_metrics.RDS'))
 combo <- readRDS(file.path(cwd, data_dir, 'Drug_screen', 'Drug_screen_Belva_Cobi_combo_metrics.RDS'))
 #prepare annotations of mutations
@@ -34,19 +38,25 @@ col_anno <- list()
 col_anno$NRAS_mut <- c(yes='black', no='white')
 col_anno$BRAF_mut <- c(yes='black', no='white')
 
-
-
 ### Prompt dataset information ###
 message('Cell lines: ', length(unique(sa$CellLineName)))
 message('Drugs: ', length(unique(sa$DrugName)))
 message('Drug combos: ', nrow(unique(dplyr::select(combo$RawTreated, c('DrugName','DrugName_2')))))
 
-### Generate figures ###
+
+### GENERATE SINGLE-AGENT METRIC FIGURES ###
 
 #decide which metrics to plot
 gtf <- list()
-gtf$long <- 'RelativeViability' # 'GRvalue')
-gtf$short <- 'RV' #'GR'
+choise_gtf <- 1
+if (choise_gtf ==0){
+  gtf$long <- 'RelativeViability'
+  gtf$short <- 'RV'
+} else{
+  gtf$long <- 'GRvalue' 
+  gtf$short <- 'GR'
+}
+
 
 #quantity used as quantification of drug effects 
 aqm <- c('%s_gDR_xc50', '%s_gDR_x_max', '%s_gDR_x_mean')
@@ -61,14 +71,16 @@ p <- list()
 for (i in 1:length(aqm)) {
   
   #order according to mutations 
-  #add annotation mutations for sorting
   sa_mut <- merge(sa, anno , by='CellLineName')
   sa_mut <- data.table::setorderv(sa_mut, c('BRAF_mut', "NRAS_mut",  aqm[i]))
-
+  
   #extract metrics to plot in matrix format
   sa_mat <- data.table::dcast(sa_mut, 
                                   factor(CellLineName, levels =unique(CellLineName)) ~  factor(DrugNamePlot), 
                                   value.var = aqm[i])
+  #order drugs
+  sa_mat <- sa_mat[, c('CellLineName', 'MEKi_Cobimetinib', 'panRAFi_Belvarafenib', 'BRAFi_Vemurafenib'), drop=FALSE ]
+  
   #make it a data.frame or pheatmap messes up annotations
   sa_mat <- as.data.frame(sa_mat)
   rownames(sa_mat)<- sa_mat$CellLineName
@@ -97,12 +109,80 @@ for (i in 1:length(aqm)) {
                               annotation_colors= col_anno,
                               main= paste(aqmlab[i], gtf$long)
   )
-  #dev.off()
 }  
 
 #save heatmaps
-file_res <- sprintf('sa_metrics_Heatmaps_%s.pdf', gtf$short)
-pdf(file.path(cwd, figures_dir, 'Drug_screen' ,file_res), width=10, height= 3)  
+file_res <- sprintf('sa_metrics_heatmaps_%s.pdf', gtf$short)
+pdf(file.path(cwd, figures_dir, 'Drug_screen' ,file_res), width=10, height= 2)  
+for (i in 1:length(p)){
+  print(p[[i]])
+  if (i < length(p))
+    grid::grid.newpage()
+}  
+dev.off() 
+
+### GENERATE COMBO METRIC FIGURES ###
+
+#quantity used as quantification of drug effects 
+aqm <- c('HSAScore', 'BlissScore')
+p<- list()
+#for each aggregate quantity
+for (i in 1:length(aqm)) {
+  combo_met <- combo[[aqm[i]]]
+  
+  #filter for the wanted growth measure
+  combo_met <- combo_met[combo_met$normalization_type == gtf$short, ]
+  
+  #order according to mutations 
+  combo_met <- merge(combo_met, anno , by='CellLineName')
+  combo_met <- data.table::setorderv(combo_met, c('BRAF_mut', "NRAS_mut", 'x'))
+   
+  #create field with both drugs
+  combo_met$Drugs_combo_name <- paste(combo_met$DrugNamePlot, combo_met$DrugNamePlot_2, sep=' x ')
+  #dcast to matrix format the HSA score
+  Combo_heatmap <- data.table::dcast(combo_met, 
+                                     factor(CellLineName, levels =unique(CellLineName)) ~  factor(Drugs_combo_name), 
+                                     value.var = 'x')
+  Combo_heatmap <- as.data.frame(Combo_heatmap)
+  # make clids rownames
+  rownames(Combo_heatmap)<- Combo_heatmap$CellLineName
+  Combo_heatmap <- select(Combo_heatmap, select = -c('CellLineName') )
+  # remove cell lines or drugs with all NA
+  #Combo_heatmap <- Combo_heatmap[, !apply(is.na(Combo_heatmap), 2, all)]
+  #Combo_heatmap <- Combo_heatmap[!apply(is.na(Combo_heatmap), 1, all), ]
+  
+  #create row annotations and labels
+  #labels_row <- unique(select(Combo_QCS, c('clid','CellLineName')))
+  #rownames(labels_row)<- labels_row$clid
+  #labels_row <- select(labels_row, select = -c('clid') )
+  breaks <- seq(from=-0.7, to=0.7, length.out=50)
+  hmcol <- rev(colorRampPalette(c("royalblue2", "royalblue1", "grey95" , "grey95" , "firebrick1", "firebrick2"))(51))
+  
+  #transpose
+  t_Combo_heatmap <- data.table::transpose(Combo_heatmap)
+  # get row and colnames in order
+  colnames(t_Combo_heatmap) <- rownames(Combo_heatmap)
+  rownames(t_Combo_heatmap) <- colnames(Combo_heatmap)
+  #heatmap 
+  #file_res <- sprintf('%s_%s_%s.pdf', aqm[i], gtf$short, dataset_name)
+  #pdf(file.path(cwd, figures_dir , dataset_name, file_res), width=25, height=4)  
+  p[[i]] <- pheatmap::pheatmap(t_Combo_heatmap, scale="none", display_numbers = TRUE, fontsize_number=10, number_color = "black",
+                               na_col = "white", angle_col = 45, fontsize=10, breaks=breaks, color=rev(hmcol),
+                               treeheight_row = 30, treeheight_col = 30,
+                               #labels_col=labels_row$CellLineName,
+                               annotation_col=anno_hm, 
+                               annotation_colors=col_anno,
+                               show_rownames=T,
+                               main= aqm[i],
+                               cluster_rows = FALSE,
+                               cluster_cols = FALSE
+  )
+  #dev.off()
+}
+
+#save heatmaps
+file_res <- sprintf('combo_metrics_heatmap_%s.pdf', gtf$short)
+pdf(file.path(cwd, figures_dir, 'Drug_screen' ,file_res), width=25, height= 3.5)  
 for (i in 1:length(p)){
   print(p[[i]])
   if (i < length(p))
@@ -111,193 +191,23 @@ for (i in 1:length(p)){
 dev.off() 
 
 
-
 ### THE CODE NEEDS TO BE UDPDATE FROM HERE ONE BY LUCA
 
-#### LOAD ANNOTATION INFORMATION FOR CELL LINES
-#add mutation information 
-
-#add zygosity information 
-CL_ann_sa_zygo <- unique(dplyr::select(dt_QCS_sa_metrics, c('CellLineName', 'clid')))
-CL_ann_sa_zygo <- merge(CL_ann_sa_zygo, CL_anno$CL_zygo, by= 'clid', all.x=T)
-CL_ann_sa_zygo[is.na(CL_ann_sa_zygo)] <- "WT"
-#addd tissue information
-CL_ann_sa_lin <- unique(dplyr::select(dt_QCS_sa_metrics, c('CellLineName', 'clid', 'Tissue')))
-#merge together
-CL_ann_sa <- unique(dplyr::select(dt_QCS_sa_metrics, c('clid', 'CellLineName')))
-CL_ann_sa <- merge(CL_ann_sa, CL_ann_sa_mut, by= c('CellLineName', 'clid'), all.x=T)
-#CL_ann_sa <- merge(CL_ann_sa, CL_ann_sa_zygo, by= 'clid', all.x=T)
-CL_ann_sa <- merge(CL_ann_sa, CL_ann_sa_lin, by= c('CellLineName', 'clid'), all.x=T)
-#create color list for annotation
-#col_ann_sa <- c(CL_anno$col_anno_CL_mut, CL_anno$col_anno_CL_zygo)
-col_ann_sa <- c(CL_anno$col_anno_CL_mut)
 
 
-#### LOAD DRUG ANNNOTATIONS 
-drug_anno_manual <- data.frame(read.csv(file.path(cwd, data_dir, drugs_dir, 'drug_annotation_manual.csv')))
-drug_anno_manual$DrugNamePlot <- paste(drug_anno_manual$drug_type, drug_anno_manual$DrugName,  sep='_')
-drug_mapping_manual <- mapDrugNamePlot(dt_QCS_sa_averaged, drug_anno_manual)
-#sa agent
-dt_QCS_all_sa_averaged <- addDrugNamePlot(dt_QCS_sa_averaged, drug_mapping_manual)
-dt_QCS_sa_metrics <- addDrugNamePlot(dt_QCS_sa_metrics, drug_mapping_manual)
-
-#combos
-assay_ID <- names(dt_QCS_combo)
-for (i in 1:length(assay_ID)){
-  drug_mapping_manual <- mapDrugNamePlot(dt_QCS_combo[[assay_ID[i]]], drug_anno_manual)
-  dt_QCS_combo[[assay_ID[i]]] <- addDrugNamePlot(dt_QCS_combo[[assay_ID[i]]], drug_mapping_manual)
-}
-
-#save tables with the right columns for plotting for paper
-remove_columns_sa <- c('clid', 'parental_identifier', 'Gnumber', 'rId', 'cId')
-sa_metrics <- dplyr::select(dt_QCS_sa_metrics, -all_of(remove_columns_sa))
-saveRDS(sa_metrics, file.path(cwd, 'results_paper', 'Drug_screen_Belva_Cobi_sa_metrics.RDS'))
-
-remove_columns_combo <- c('clid', 'parental_identifier', 'Gnumber', 'Gnumber_2', 'rId', 'cId', 'record_id', 'barcode')
-combo_metrics <- dt_QCS_combo
-assay_ID <- names(combo_metrics)
-for (i in 1:length(assay_ID)){
-  combo_metrics[[assay_ID[i]]] <- dplyr::select(combo_metrics[[assay_ID[i]]], -all_of(remove_columns_sa))
-}
-saveRDS(combo_metrics, file.path(cwd, 'results_paper', 'Drug_screen_Belva_Cobi_combo_metrics.RDS'))
 
 
-#####  DECIDE METRICS TO USE 
-
-gr_mtr <- 'RelativeViability' #'GRvalue' # # # #
-gtf <- getGrowthTypeFormat(gr_mtr)
-
-#replace undefned or overestimaed IC50 with max concentration used
-xc50_str <- sprintf('%s_gDR_xc50', gtf$short)
-inf_xc50 <-is.infinite(dt_QCS_sa_metrics[[xc50_str]])
-dt_QCS_sa_metrics[inf_xc50, c(xc50_str)] <- 10^dt_QCS_sa_metrics[inf_xc50, c('maxlog10Concentration')]
-over_xc50 <- dt_QCS_sa_metrics[[xc50_str]] > 10^dt_QCS_sa_metrics$maxlog10Concentration
-dt_QCS_sa_metrics[over_xc50, c(xc50_str)] <- 10^dt_QCS_sa_metrics[over_xc50, c('maxlog10Concentration')]
 
 
-#### 0) PLOT CENSUS OF MUTATIONS AND LINEAGES
-
-# CL_ann_sa_melt <- reshape2::melt(CL_ann_sa, id.vars = c('clid','CellLineName'))
-# p <- ggplot( data=CL_ann_sa_melt, aes(x=variable, fill=value)) + geom_bar(color='black') #+  geom_text(size = 3, position = position_stack(vjust = 0.5))
-# file_res <- sprintf('Census_Mutations_Lineages_%s.pdf', dataset_name)
-# pdf(file.path(cwd, figures_dir, dataset_name ,file_res), width=6, height=6)  
-# print(p)
-# dev.off()
-
-##### 1) PLOT SA HEAMTAPS  AUC, IC50, Emax ##### 
-
-#save cell annotations
-CL_ann_sa_ready$CellLineName <- rownames(CL_ann_sa_ready)
-saveRDS(CL_ann_sa_ready, file.path(cwd, 'results_paper', 'Drug_screen_cell_line_annotations.RDS'))
-
-#prepare cell annotations
-CL_ann_sa_ready <- CL_ann_sa
-CL_ann_sa_ready <- dplyr::select(CL_ann_sa_ready, -c("CellLineName","clid"))
-rownames(CL_ann_sa_ready)<- CL_ann_sa$CellLineName
-
-#quantity used as quantification of drug effects 
-aqm <- c('%s_gDR_xc50', '%s_gDR_x_max', '%s_gDR_x_mean')
-for (i in 1:length(aqm)){
-  aqm[i] <- sprintf(aqm[i], gtf$short)
-}
-#name plot for quantification of drug effects
-aqmlab <-c('IC50_uM', 'E_max', 'AUC')
-#scale of y axis
-qmfunc <- c(log10, identity, identity)
-p <- list()
-for (i in 1:length(aqm)) {
-  #extract metrics to plot in matrix format
-  SA_mat_ori <- data.table::dcast(dt_QCS_sa_metrics, 
-                                      factor(CellLineName, levels =unique(CellLineName)) ~  factor(DrugNamePlot), 
-                                      value.var = aqm[i])
-  #make it a data.frame or pheatmap messes up annotations
-  SA_mat_cvd <- as.data.frame(SA_mat_ori)
-  rownames(SA_mat_cvd)<- SA_mat_cvd$CellLineName
-  SA_mat_cvd <- dplyr::select(SA_mat_cvd, -c('CellLineName'))
-  #remove columns and rows that are all NAN
-  SA_mat_cvd <- SA_mat_cvd[, !apply(is.na(SA_mat_cvd), 2, all)]
-  SA_mat_cvd <- SA_mat_cvd[!apply(is.na(SA_mat_cvd), 1, all), ]
-  #convert to right scale
-  SA_mat_cvd[] <- lapply(SA_mat_cvd, function(x) qmfunc[[i]](x))
-  
-  #flip 
-  t_SA_mat_cvd <- data.table::transpose(SA_mat_cvd)
-  # get row and colnames in order
-  colnames(t_SA_mat_cvd) <- rownames(SA_mat_cvd)
-  rownames(t_SA_mat_cvd) <- colnames(SA_mat_cvd)
-  
-  #plot heatmap
-  breaks <- seq(from=min(na.omit(SA_mat_cvd)), to=1.0, length.out=50)
-  hmcol <- rev(colorRampPalette(c("firebrick2", "white" ))(51))
-  #file_res <- sprintf('%s_%s_%s_Heatmap_SA.pdf',aqmlab[i], gtf$short, dataset_name)
-  #pdf(file.path(cwd, figures_dir, dataset_name ,file_res), width=15, height=4)  
-  p[[i]]<- pheatmap::pheatmap(t_SA_mat_cvd, scale="none", display_numbers = TRUE, fontsize_number=8, number_color = "black",
-                             color=rev(hmcol), breaks= breaks, na_col = "white", angle_col = 90, fontsize=6,
-                             treeheight_row = 30, treeheight_col = 30,
-                             annotation_col= CL_ann_sa_ready,
-                             annotation_colors=col_ann_sa,
-                             main= paste(aqmlab[i], dataset_name)
-  )
-  #dev.off()
-}  
-
-#save heatmaps
-file_res <- sprintf('SA_Metrics_Heatmaps_%s_%s.pdf', gtf$short, dataset_name)
-pdf(file.path(cwd, figures_dir, 'gCSI' ,file_res), width=15, height= 3.5)  
-for (i in 1:length(p)){
-  print(p[[i]])
-  if (i < length(p))
-     grid::grid.newpage()
-}  
-dev.off() 
 
 
-##### 1.1) PLOT BAR PLOTS AUC, IC50, Emax for each drug  with mutation status as color##### 
 
 
-# drug_sel <- unique(dt_QCS_sa_metrics$Gnumber)
-# p<- list()
-# for (i in 1:length(drug_sel)){
-#   #select the drug
-#   idx <- dt_QCS_sa_metrics$Gnumber== drug_sel[i] 
-#   dt_QCS_sa_metrics_sel <- dt_QCS_sa_metrics[idx,]
-#   #add the mutational information
-#   CL_ann_sa_sel <- dplyr::select(CL_ann_sa, c('clid', 'BRAF_mut', 'KRAS_mut', 'NRAS_mut','RASRAF_wt'))
-#   CL_ann_sa_sel$mutations <- apply(CL_ann_sa_sel,1,function(x) paste(names(x)[which(x=="yes")], collapse='_'))
-#   idx <- CL_ann_sa_sel$mutations %in% c('BRAF_mut_KRAS_mut','BRAF_mut_NRAS_mut')
-#   CL_ann_sa_sel[idx, c('mutations')] <- 'BRAF_RAS_mut'
-#   
-#   dt_QCS_sa_metrics_sel <- merge(dt_QCS_sa_metrics_sel, CL_ann_sa_sel, by='clid', x.all=TRUE)
-#   col_sel <- colnames(CL_ann_sa_sel)
-#   idx <- col_sel[CL_ann_sa_sel[, ..col_sel] == 'yes']
-#   
-#   #plot 
-#   p[[i]] <- ggplot(dt_QCS_sa_metrics_sel, aes(x = reorder(clid, RV_gDR_xc50 ), y = RV_gDR_xc50, fill=mutations)) +
-#     geom_bar(stat = "identity") +
-#     xlab(paste('Cell Lines ','(N=',nrow(dt_QCS_sa_metrics_sel),')',sep='')) +
-#     ylab(unique(paste(dt_QCS_sa_metrics_sel$DrugNamePlot, 'IC50 uM'))) +
-#     scale_fill_manual("", values = c('KRAS_mut' = "orange", 'NRAS_mut' = "firebrick", 'RASRAF_wt' = "gray", 'BRAF_mut' = 'blue', 'BRAF_mut_RAS_mut' = 'black')) +
-#     scale_y_continuous(trans='log10') +
-#     ggpubr::theme_pubr() +
-#     theme(text = element_text(size=15),
-#           axis.text.x=element_blank(),
-#           axis.ticks.x=element_blank(),
-#           plot.title = element_text(hjust = 0.5),
-#           panel.grid.major = element_blank(),
-#           panel.grid.minor = element_blank(),
-#           #legend.position = "none"
-#           plot.margin = margin(.5, .5, .5, 2, "cm")
-#     )
-# }
-# 
-# 
-# #save dose range plot
-# file_res <- sprintf('SA_Metrics_BarPlots_%s_%s.pdf', gtf$short, dataset_name)
-# pdf(file.path(cwd, figures_dir, dataset_name ,file_res), width=8, height= 5)  
-# for (i in 1:length(p)){
-#   print(p[[i]])
-# }  
-# dev.off() 
+
+
+
+
+
 
 
 ##### 2) PLOT Combo HSA and Bliss score ####

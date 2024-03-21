@@ -49,7 +49,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(combo$RawTreated, c('DrugName
 
 #decide which metrics to plot
 gtf <- list()
-choise_gtf <- 1
+choise_gtf <- 0
 if (choise_gtf ==0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -218,7 +218,7 @@ idx <- clines_drugs$CellLineName %in% cell_lines_sel
 clines_drugs <- clines_drugs[idx,]
 
 #extract cell lines and drugs to plot
-clines <- clines_drugs$CellLineName
+clines <- cell_lines_sel
 drug <- clines_drugs$DrugName
 drug_2 <- clines_drugs$DrugName_2
 
@@ -270,8 +270,8 @@ for (i in 1:length(clines)){
   #filter by normalization_type
   dt_smooth <- dt_smooth[dt_smooth$normalization_type==gtf$short,]
   colors <- colorRampPalette(c("royalblue3", "royalblue1", "grey95" , "grey95" , "firebrick1", "firebrick3"))(51)
-  mine <- min(c(-0.5, min(na.omit(dt_smooth[,..field]))))
-  maxe <- max(c(0.5, max(na.omit(dt_smooth[,..field])))) 
+  mine <- min(c(-0.4, min(na.omit(dt_smooth[,..field]))))
+  maxe <- max(c(0.4, max(na.omit(dt_smooth[,..field])))) 
   limits <- c(mine,maxe)
   p[[length(p)+1]] <- plotHeatMapCombo(dt_smooth, field, limits, colors) 
   if ( 'BlissExcess' %in% plot_ID) {

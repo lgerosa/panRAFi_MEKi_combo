@@ -149,13 +149,10 @@ for (i in 1:length(aqm)) {
   rownames(Combo_heatmap)<- Combo_heatmap$CellLineName
   Combo_heatmap <- select(Combo_heatmap, select = -c('CellLineName') )
   # remove cell lines or drugs with all NA
-  #Combo_heatmap <- Combo_heatmap[, !apply(is.na(Combo_heatmap), 2, all)]
-  #Combo_heatmap <- Combo_heatmap[!apply(is.na(Combo_heatmap), 1, all), ]
+  Combo_heatmap <- Combo_heatmap[, !apply(is.na(Combo_heatmap), 2, all)]
+  Combo_heatmap <- Combo_heatmap[!apply(is.na(Combo_heatmap), 1, all), ]
   
-  #create row annotations and labels
-  #labels_row <- unique(select(Combo_QCS, c('clid','CellLineName')))
-  #rownames(labels_row)<- labels_row$clid
-  #labels_row <- select(labels_row, select = -c('clid') )
+  #define colors and breaks
   breaks <- seq(from=-0.7, to=0.7, length.out=50)
   hmcol <- rev(colorRampPalette(c("royalblue2", "royalblue1", "grey95" , "grey95" , "firebrick1", "firebrick2"))(51))
   
@@ -165,8 +162,6 @@ for (i in 1:length(aqm)) {
   colnames(t_Combo_heatmap) <- rownames(Combo_heatmap)
   rownames(t_Combo_heatmap) <- colnames(Combo_heatmap)
   #heatmap 
-  #file_res <- sprintf('%s_%s_%s.pdf', aqm[i], gtf$short, dataset_name)
-  #pdf(file.path(cwd, figures_dir , dataset_name, file_res), width=25, height=4)  
   p[[i]] <- pheatmap::pheatmap(t_Combo_heatmap, scale="none", display_numbers = TRUE, fontsize_number=10, number_color = "black",
                                na_col = "white", angle_col = 45, fontsize=10, breaks=breaks, color=rev(hmcol),
                                treeheight_row = 30, treeheight_col = 30,
@@ -194,12 +189,17 @@ dev.off()
 
 ### GENERATE CELL LINE SPECIFIC DOSE RESPONSE HEATMAPS  ###
 
-cell_lines_sel <- c('A-375', # BRAF V600E
+#plot selected lines
+cell_lines_sel <- c( 
+                    #'A-375', # BRAF V600E
+                    'WM−266−4', # BRAF V600E
                     'SK-MEL-28',# BRAF V600E
                     'MEL-JUSO', #, # NRAS Q61
                     'SK-MEL-2' # NRAS Q61
 )
-#combo_sel <- list(c('panRAFi_Belvarafenib','MEKi_Cobimetinib')) $TO DO
+
+#plot all lines
+cell_lines_sel <- unique(combo[['Averaged']]$CellLineName)
 
 #define assays to plot
 #plot_ID <- c("SmoothMatrix", "SmoothMatrix_swapped", "isobolograms", "HSAExcess", "BlissExcess", "isobologramsIC50") 
@@ -259,25 +259,17 @@ for (i in 1:length(clines)){
   maxe <- max(c(maxF, max(na.omit(dt_smooth[,..field])))) 
   limits <- c(mine,maxe)
   p[[length(p)+1]]<- plotHeatMapCombo(dt_smooth, field, limits, colors)
-  if ( 'SmoothMatrix' %in% plot_ID) {
-    
-  }
-  
-  
+
   #plot Bliss Excess
   field <- 'excess' #sprintf('%s', gtf$long)
   dt_smooth <- combo_sub[['BlissExcess']]
   #filter by normalization_type
   dt_smooth <- dt_smooth[dt_smooth$normalization_type==gtf$short,]
   colors <- colorRampPalette(c("royalblue3", "royalblue1", "grey95" , "grey95" , "firebrick1", "firebrick3"))(51)
-  mine <- min(c(-0.4, min(na.omit(dt_smooth[,..field]))))
-  maxe <- max(c(0.4, max(na.omit(dt_smooth[,..field])))) 
+  mine <- min(c(-0.7, min(na.omit(dt_smooth[,..field]))))
+  maxe <- max(c(0.7, max(na.omit(dt_smooth[,..field])))) 
   limits <- c(mine,maxe)
   p[[length(p)+1]] <- plotHeatMapCombo(dt_smooth, field, limits, colors) 
-  if ( 'BlissExcess' %in% plot_ID) {
-    #Drug on x axis and Drug_2 as factors
-   
-  }  
 }
 
 #plot figure

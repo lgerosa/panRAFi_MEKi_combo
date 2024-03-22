@@ -2,9 +2,9 @@
 # by Luca Gerosa and Andrew Goetz
 #
 #analyse the RAF/MEK screen:
-#1. Plot SA response metrics with annotated mutations and lineage of cell lines
-#2. Plot drug combo response metrics with annotated mutations and lineage of cell lines
-#3. Study dose range of combination of RAF/MEK
+#1. Plot SA response metrics (IC50, AUC, Emax)
+#2. Plot drug combo response metrics (HSA, Bliss)
+#3. Plot individual cell line heatmaps 
 
 library(ggplot2)
 library(gridExtra)
@@ -50,7 +50,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(combo$RawTreated, c('DrugName
 #decide which metrics to plot
 gtf <- list()
 choise_gtf <- 0
-if (choise_gtf ==0){
+if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
 } else{

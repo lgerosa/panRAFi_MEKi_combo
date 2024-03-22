@@ -8,6 +8,8 @@ library(ggplot2)
 library(gridExtra)
 library(dplyr)
 library(viridis)
+library(gDRutils)
+library(ggbeeswarm)
 
 #set working directory
 cwd <- "/gstore/home/gerosal/projects/work/panRAFi_MEKi_combo"
@@ -30,7 +32,6 @@ combo <- readRDS(file.path(cwd, data_dir, 'Drug_screen', 'Drug_screen_Belva_Cobi
 smooth <- combo$SmoothMatrix
 #keep only Belvarafenib and Cobimetinib
 smooth <- smooth[smooth$DrugName == 'panRAFi_Belvarafenib' & smooth$DrugName_2 =='MEKi_Cobimetinib',]
-
 #prepare annotations of mutations
 anno <- readRDS(file.path(cwd, data_dir, 'Drug_screen', 'Drug_screen_cell_line_annotations.RDS'))
 #add annotations
@@ -42,7 +43,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(smooth, c('DrugName','DrugNam
 
 #decide which metrics to use
 gtf <- list()
-choise_gtf <- 0
+choise_gtf <- 1
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -82,9 +83,9 @@ CGroups[['NRAS_mut']] <-  unique(smooth[idx,..fgroup])
 
 
 #load isobologram data and define quantities to use
-clids_drugs <- unique(select(smooth, c('CellLineName','DrugName', 'DrugName_2')))
+clines_drugs <- unique(select(smooth, c('CellLineName','DrugName', 'DrugName_2')))
 ord_cols <- c('DrugName', 'DrugName','CellLineName')
-clids_drugs <- data.table::setorderv(clids_drugs, ord_cols)
+clines_drugs <- data.table::setorderv(clines_drugs, ord_cols)
 
 #convert Concentrations to Concentrations_free using FuDrugs
 FuDrugs <- data.frame(read.csv(file.path(cwd, data_dir, 'Dose_projections', 'FuDrugs.csv')))
@@ -113,12 +114,18 @@ add_free_Concentrations <- function(dt_data, fu_drugs){
 #add free concentration vectors  
 smooth <- add_free_Concentrations(smooth, FuDrugs)
 
+#flatten
+field <- sprintf('%s_x', gtf$short)
+groups <- c("normalization_type")
+wide_cols <- c('x')
+smooth <- gDRutils::flatten(smooth, groups = groups, wide_cols = wide_cols)
+
 #merge doses 
 DDoses_temp <- DDoses
 DDoses_temp$Dose_ID_2 <- DDoses_temp$Dose_ID
 DDoses_temp$DrugName_2 <- DDoses_temp$DrugName
-clids_drugs <- merge(clids_drugs, dplyr::select(DDoses_temp, c('DrugName','Dose_ID')), by='DrugName',  allow.cartesian=TRUE)
-clids_drugs <- merge(clids_drugs, dplyr::select(DDoses_temp, c('DrugName_2','Dose_ID_2')), by='DrugName_2',  allow.cartesian=TRUE)
+clines_drugs <- merge(clines_drugs, dplyr::select(DDoses_temp, c('DrugName','Dose_ID')), by='DrugName',  allow.cartesian=TRUE)
+clines_drugs <- merge(clines_drugs, dplyr::select(DDoses_temp, c('DrugName_2','Dose_ID_2')), by='DrugName_2',  allow.cartesian=TRUE)
 
 #create struture to save results 
 col_names_dd <- c('CellLineName',
@@ -141,25 +148,22 @@ for (i in 1:length(allNames)){
   allCellLines <- c(allCellLines, CGroups[[allNames[i]]][[1]])
 }
 allCellLines <- unique(allCellLines)
-idx <- clids_drugs$CellLineName %in% allCellLines
-clids_drugs <- clids_drugs[idx,]
+idx <- clines_drugs$CellLineName %in% allCellLines
+clines_drugs <- clines_drugs[idx,]
 
 #extract SA or combo metrics for each drug and cell line at defined concentration range
-for (i in 1:nrow(clids_drugs)) {
+for (i in 1:nrow(clines_drugs)) {
   #extract cell lines and drugs
-  clid <- clids_drugs[['clid']][i]
-  cln <- clids_drugs[['CellLineName']][i]
-  drug <- clids_drugs[['Gnumber']][i]
-  drug_2 <- clids_drugs[['Gnumber_2']][i]
-  dnp <- clids_drugs[['DrugName']][i]
-  dnp_2 <- clids_drugs[['DrugName_2']][i]   
-  dose_id <- clids_drugs[['Dose_ID']][i]
-  dose_id_2 <- clids_drugs[['Dose_ID_2']][i]
+  cln <- clines_drugs[['CellLineName']][i]
+  drug <- clines_drugs[['DrugName']][i]
+  drug_2 <- clines_drugs[['DrugName_2']][i]
+  dose_id <- clines_drugs[['Dose_ID']][i]
+  dose_id_2 <- clines_drugs[['Dose_ID_2']][i]
   
   #use smooth matrix to get measured values
-  idx <- (smooth$clid==clid) &
-    (smooth$Gnumber==drug) &
-    (smooth$Gnumber_2==drug_2)
+  idx <- (smooth$CellLineName==cln) &
+         (smooth$DrugName==drug) &
+         (smooth$DrugName_2==drug_2) 
   dt_smooth_sub <- smooth[idx,]
   #use interpolation to extract growth metrics at SA and combo doses
   smooth_matrix <- reshape2::acast(dt_smooth_sub, free_Concentration ~ free_Concentration_2, value.var = gtf$long)
@@ -197,10 +201,12 @@ for (i in 1:nrow(clids_drugs)) {
   
   #calculate Bliss using gDR
   sa2 <- dt_smooth_sub[dt_smooth_sub[['free_Concentration']] == 0,]
-  sa2 <- as.data.frame(dplyr::select(sa2, c('free_Concentration', 'free_Concentration_2', gtf$long)))
+  sa2 <- dplyr::select(sa2, c('free_Concentration', 'free_Concentration_2', gtf$long))
+  colnames(sa2) <- c("free_Concentration",   "free_Concentration_2", "x")
   sa1 <- dt_smooth_sub[dt_smooth_sub[['free_Concentration_2']] == 0,]
-  sa1 <- as.data.frame(dplyr::select(sa1, c('free_Concentration', 'free_Concentration_2', gtf$long)))
-  dt_bliss <- gDRcore::calculate_Bliss(sa1, 'free_Concentration', sa2, 'free_Concentration_2', gtf$long)
+  sa1 <- dplyr::select(sa1, c('free_Concentration', 'free_Concentration_2', gtf$long))
+  colnames(sa1) <- c("free_Concentration",   "free_Concentration_2", "x")
+  dt_bliss <- gDRcore::calculate_Bliss(sa1, 'free_Concentration', sa2, 'free_Concentration_2', 'x')
   bliss_matrix <- reshape2::acast(dt_bliss, free_Concentration ~ free_Concentration_2, value.var = 'metric')
   y_bliss <- sort(sa1$free_Concentration)
   x_bliss <- sort(sa2$free_Concentration_2)
@@ -212,9 +218,8 @@ for (i in 1:nrow(clids_drugs)) {
   )
   
   #save values 
-  dd_temp <- c(clid, cln, 
+  dd_temp <- c(cln, 
                drug, drug_2, 
-               dnp, dnp_2,
                dose_id, dose_id_2, gtf$long,
                dd[1], dd[2], dd[3],
                dd_2[1], dd_2[2], dd_2[3],
@@ -230,7 +235,7 @@ for (i in 1:nrow(clids_drugs)) {
   dt_dd <- rbind(dt_dd, dt_dd_temp)
 }  
 #convert numbers back froms string
-dt_dd[, c(10:30)] <- sapply(dt_dd[, c(10:30)], as.numeric)
+dt_dd[, c(7:27)] <- sapply(dt_dd[, c(7:27)], as.numeric)
 
 ## Plot dose regime for each group (each a  pdf page)
 cgroups_ids <- names(CGroups) 
@@ -255,7 +260,6 @@ for (j in 1:length(cgroups_ids)){
     if (nrow(dt_SA)<1)  {
       dt_SA <-dt_SA_2
       dt_SA$free_Concentration <- dt_SA$free_Concentration_2
-      dt_SA$Gnumber <- dt_SA$Gnumber_2
       dt_SA$DrugName <- dt_SA$DrugName_2
     }
     #get the dose and min and max used for calculations 
@@ -263,11 +267,11 @@ for (j in 1:length(cgroups_ids)){
     dd_min <- DDoses[i, c('dd_min')]
     dd_max <- DDoses[i, c('dd_max')]
     #take the mean across cell lines that had different smoothing
-    dt_SA <- dplyr::select(dt_SA, c('clid', 'CellLineName',
-                                    'Gnumber',
-                                    'free_Concentration', 'DrugName', gtf$long))
+    dt_SA <- dplyr::select(dt_SA, c('CellLineName',
+                                    'DrugName',
+                                    'free_Concentration', gtf$long))
     dt_SA<- dt_SA %>%
-      group_by(clid,CellLineName,Gnumber, free_Concentration, DrugName) %>%
+      group_by(CellLineName,DrugName, free_Concentration) %>%
       summarise(across(.data[[gtf$long]], mean), .groups = 'drop')
     #plot the single agent resopnse with dose
     p[[length(p)+1]] <- ggplot(data = dt_SA, aes_string(x = 'free_Concentration', y = gtf$long, color='CellLineName'))+  
@@ -280,7 +284,7 @@ for (j in 1:length(cgroups_ids)){
       scale_y_continuous(lim=c(NA, 1.2)) +
       xlab(paste(unique(dt_SA$DrugName),'uM'))+
       scale_colour_grey(start = 0.0, end = 0.8, na.value = "red", aesthetics = "colour") +
-      labs(title=paste(cgroups_ids[j],'\n',DDoses[i, c('Dose_ID')],'N=',length(unique(dt_SA$clid)))) +
+      labs(title=paste(cgroups_ids[j],'\n',DDoses[i, c('Dose_ID')],'N=',length(unique(dt_SA$CellLineName)))) +
       ggpubr::theme_pubr() +
       theme(text = element_text(size=6),
             axis.text = element_text(size = 6),
@@ -295,9 +299,9 @@ for (j in 1:length(cgroups_ids)){
 }
 
 #save dose range plot
-file_res <- sprintf('Dose_range_DA_%s_%s.pdf', gtf$short, dataset_name)
+file_res <- sprintf('Dose_range_DA_%s.pdf', gtf$short)
 ncol <- length(pall[[cgroups_ids[1]]])
-pdf(file.path(cwd, figures_dir, fig_sub_dir ,file_res), width=ncol * 4, height= 4)  
+pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width=ncol * 4, height= 4)  
 for (j in 1:length(cgroups_ids)){
   p_temp <- pall[[cgroups_ids[j]]]
   ncol <- length(pall[[cgroups_ids[j]]])
@@ -309,8 +313,8 @@ dev.off()
 
 clines_hl <- c()
 cgroups_ids <- names(CGroups) 
-drug_combos <- unique(select(dt_dd, c('Gnumber', 'Gnumber_2', 'DD','DD_2','Dose_ID', 'Dose_ID_2')))
-ord_cols <- c('Gnumber', 'Gnumber_2', 'DD','DD_2','Dose_ID', 'Dose_ID_2')
+drug_combos <- unique(select(dt_dd, c('DrugName', 'DrugName_2', 'DD','DD_2','Dose_ID', 'Dose_ID_2')))
+ord_cols <- c('DrugName', 'DrugName_2', 'DD','DD_2','Dose_ID', 'Dose_ID_2')
 drug_combos <- data.table::setorderv(drug_combos, ord_cols)
 pall_wf <- list() #this is for waterfall plots
 pall_br <- list() #this is for barplot
@@ -322,8 +326,8 @@ for (j in 1:length(cgroups_ids)){
   p_vi <- list()
   for  (i in 1:nrow(drug_combos)) {
     #extract drug pairs
-    drug <- drug_combos[['Gnumber']][i] 
-    drug_2 <- drug_combos[['Gnumber_2']][i]
+    drug <- drug_combos[['DrugName']][i] 
+    drug_2 <- drug_combos[['DrugName_2']][i]
     DD <- drug_combos[['DD']][i] 
     DD_2 <- drug_combos[['DD_2']][i]
     Dose_ID <- drug_combos[['Dose_ID']][i] 
@@ -434,7 +438,7 @@ for (j in 1:length(cgroups_ids)){
       )
     
     #melt dataset for plotting bar format
-    dt_dd_sub_melted <- reshape2::melt(dt_dd_sub, id.vars = c("clid", "CellLineName", "DrugName","DrugName_2"),
+    dt_dd_sub_melted <- reshape2::melt(dt_dd_sub, id.vars = c("CellLineName", "DrugName","DrugName_2"),
                                        measure.vars = c("SA", 
                                                         "SA_2", 
                                                         "Combo", 
@@ -498,9 +502,9 @@ for (j in 1:length(cgroups_ids)){
 }
 
 #save bar plots
-file_res <- sprintf('Barplot_DA_%s_%s.pdf', gtf$short, dataset_name)
+file_res <- sprintf('Barplot_DA_%s.pdf', gtf$short)
 ncol <- length(pall_br[[cgroups_ids[1]]])
-pdf(file.path(cwd, figures_dir, fig_sub_dir ,file_res), width=5 * ncol, height=5 )  
+pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width=5 * ncol, height=5 )  
 for (j in 1:length(cgroups_ids)){
   p_temp <- pall_br[[cgroups_ids[j]]]
   ncol <- length(p_temp)
@@ -509,9 +513,9 @@ for (j in 1:length(cgroups_ids)){
 dev.off() 
 
 #save violin plots
-file_res <- sprintf('Violin_DA_%s_%s.pdf', gtf$short, dataset_name)
+file_res <- sprintf('Violin_DA_%s.pdf', gtf$short)
 ncol <- length(pall_vi[[cgroups_ids[1]]])
-pdf(file.path(cwd, figures_dir, fig_sub_dir ,file_res), width=3 * ncol, height=5 )  
+pdf(file.path(cwd, figures_dir, 'Dose_projections',file_res), width=3 * ncol, height=5 )  
 for (j in 1:length(cgroups_ids)){
   p_temp <- pall_vi[[cgroups_ids[j]]]
   ncol <- length(p_temp)
@@ -521,9 +525,9 @@ dev.off()
 
 
 #save waterfall plots
-file_res <- sprintf('Waterfall_DA_%s_%s.pdf', gtf$short, dataset_name)
+file_res <- sprintf('Waterfall_DA_%s.pdf', gtf$short)
 ncol <- length(pall_wf[[cgroups_ids[1]]])
-pdf(file.path(cwd, figures_dir, fig_sub_dir ,file_res), width=5 * ncol, height=5 )  
+pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width=5 * ncol, height=5 )  
 for (j in 1:length(cgroups_ids)){
   p_temp <- pall_wf[[cgroups_ids[j]]]
   ncol <- length(p_temp)
@@ -552,64 +556,65 @@ mixmax_fields <- c(1,2,2) #1 for GR, Rel, 2 for HSA and Bliss, method to calcula
 
 #add free drug calculations to combo dataset
 for (i in 1:length(assay_ID)){
-  dt_QCS_combo[[assay_ID[i]]] <- add_free_Concentrations(dt_QCS_combo[[assay_ID[i]]], FuDrugs)
+  combo[[assay_ID[i]]] <- add_free_Concentrations(combo[[assay_ID[i]]], FuDrugs)
 }
 
 
 
 #for each cell line and drug combination
-p_smooth <- list()
+p_matv <- list()
 for (i in 1:nrow(dt_dd)){
   #extract Rel.vial or GR, HSA and Bliss from QCS_combo
   for (j in 1:length(assay_ID)){
     assay <- assay_ID[j]
     field <- field_ID[j]
-    smooth <- dt_QCS_combo[[assay]]
-    idx <- ((smooth$CellLineName==dt_dd[i, c('CellLineName')]) &
-              (smooth$Gnumber==dt_dd[i, c('Gnumber')]) &
-              (smooth$Gnumber_2==dt_dd[i, c('Gnumber_2')]))
-    smooth <- smooth[idx, ]
-    if ('normalization_type' %in% colnames(smooth)){
-      idx <- (smooth$normalization_type==gtf$short)
-      smooth <- smooth[idx, ]
+    matv <- combo[[assay]]
+    idx <- ((matv$CellLineName==dt_dd[i, c('CellLineName')]) &
+              (matv$DrugName==dt_dd[i, c('DrugName')]) &
+              (matv$DrugName_2==dt_dd[i, c('DrugName_2')]))
+    matv <- matv[idx, ]
+    if ('normalization_type' %in% colnames(matv)){
+      groups <- c("normalization_type")
+      wide_cols <- c('x')
+      matv <- gDRutils::flatten(matv, groups = groups, wide_cols = wide_cols)
     }
-    if (nrow(smooth)>1) {
+    if (nrow(matv)>1) {
       #use free concentrations to plot
-      smooth$Concentration <- smooth$free_Concentration
-      smooth$Concentration_2 <- smooth$free_Concentration_2
-      smooth <- createLogConcentrations(smooth)
+      matv$Concentration <- matv$free_Concentration
+      matv$Concentration_2 <- matv$free_Concentration_2
+      matv <- createLogConcentrations(matv)
       if (mixmax_fields[j]==1) {
-        mine <- min(c(0.0, min(na.omit(smooth[,..field]))))
-        maxe <- max(c(1.1, max(na.omit(smooth[,..field])))) 
+        mine <- min(c(0.0, min(na.omit(matv[,..field]))))
+        maxe <- max(c(1.1, max(na.omit(matv[,..field])))) 
         cdotdose <- 'black'
       } else if (mixmax_fields[j]==2) {
-        tope <- max(abs(c(min(na.omit(smooth[,..field])), 
-                          max(na.omit(smooth[,..field])))))
+        tope <- max(abs(c(min(na.omit(matv[,..field])), 
+                          max(na.omit(matv[,..field])))))
         mine <- min(c(-0,3,-tope))
         maxe <- max(c(0.3, tope))
         cdotdose <- 'black'
       }
       limits <- c(mine,maxe)
       #calculate width and height of each tile for geom_tile
-      smooth$x <- smooth$logConcentration
-      smooth$y <- smooth$logConcentration_2
-      ux <- unique(smooth$x)
-      uy <- unique(smooth$y)
+      matv$x <- matv$logConcentration
+      matv$y <- matv$logConcentration_2
+      ux <- unique(matv$x)
+      uy <- unique(matv$y)
       diffux <- diff(ux)/2
       diffuy <- diff(uy)/2
       #calculate width left and right (wl, wr) and height up and down (hu, hd)
-      smooth$wl=plyr::mapvalues(smooth$x, ux, c(diffux[1],diffux))
-      smooth$wr=plyr::mapvalues(smooth$x, ux, c(diffux,diffux[length(diffux)]))
-      smooth$hu=plyr::mapvalues(smooth$y, uy, c(diffuy,diffuy[length(diffuy)]))
-      smooth$hd=plyr::mapvalues(smooth$y, uy, c(diffuy[1],diffuy))
+      matv$wl=plyr::mapvalues(matv$x, ux, c(diffux[1],diffux))
+      matv$wr=plyr::mapvalues(matv$x, ux, c(diffux,diffux[length(diffux)]))
+      matv$hu=plyr::mapvalues(matv$y, uy, c(diffuy,diffuy[length(diffuy)]))
+      matv$hd=plyr::mapvalues(matv$y, uy, c(diffuy[1],diffuy))
       #calculate xmin, xmax, ymin, ymax for geom_rect
-      smooth$xmin <- (smooth$x - smooth$wl)
-      smooth$xmax <- (smooth$x + smooth$wr)
-      smooth$ymin <- (smooth$y - smooth$hd)
-      smooth$ymax <- (smooth$y + smooth$hu)
-      colors_smooth <- colors_fields[[j]]
-      p_smooth[[length(p_smooth)+1]] <- ggplot()  +
-        geom_rect(data=smooth, 
+      matv$xmin <- (matv$x - matv$wl)
+      matv$xmax <- (matv$x + matv$wr)
+      matv$ymin <- (matv$y - matv$hd)
+      matv$ymax <- (matv$y + matv$hu)
+      colors_matv <- colors_fields[[j]]
+      p_matv[[length(p_matv)+1]] <- ggplot()  +
+        geom_rect(data=matv, 
                   aes_string(xmin = 'xmin', xmax = 'xmax', 
                              ymin = 'ymin', ymax = 'ymax', 
                              fill = field)) +
@@ -617,9 +622,9 @@ for (i in 1:nrow(dt_dd)){
                            dt_dd[i, c('CellLineName')],
                            dt_dd[i, c('Dose_ID')],
                            dt_dd[i, c('Dose_ID_2')])) +
-        xlab(paste(unique(smooth$DrugName),'uM'))+
-        ylab(paste(unique(smooth$DrugName_2),'uM')) +
-        scale_fill_gradientn(colours = colors_smooth, limits=limits) +
+        xlab(paste(unique(matv$DrugName),'uM'))+
+        ylab(paste(unique(matv$DrugName_2),'uM')) +
+        scale_fill_gradientn(colours = colors_matv, limits=limits) +
         ggpubr::theme_pubr() +
         labs(fill = title_ID[j]) +
         theme(text = element_text(size=7),
@@ -633,7 +638,7 @@ for (i in 1:nrow(dt_dd)){
       
       #plot the dd concentrations on x and y axis 
       dt_dd_sub <- dt_dd[i,]
-      p_smooth[[length(p_smooth)]] <- p_smooth[[length(p_smooth)]] +
+      p_matv[[length(p_matv)]] <- p_matv[[length(p_matv)]] +
         geom_point(data=dt_dd_sub,
                    aes(x = log10(DD), y = log10(DD_2)), colour = cdotdose, shape= 10, size = 5)
     }
@@ -642,92 +647,82 @@ for (i in 1:nrow(dt_dd)){
 }
 
 #save heatmaps with concentration plots
-file_res <- sprintf('Heatmaps_DA_%s_%s.pdf', gtf$short, dataset_name)
-nrow <- length(p_smooth)/3
-pdf(file.path(cwd, figures_dir, fig_sub_dir ,file_res), width= 15 , height=5 * nrow  )  
-print(grid.arrange(grobs = p_smooth, ncol=3))
+file_res <- sprintf('Heatmaps_DA_%s.pdf', gtf$short)
+nrow <- length(p_matv)/3
+pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width= 15 , height=5 * nrow  )  
+print(grid.arrange(grobs = p_matv, ncol=3))
 dev.off()
 
 #### Plot individual cells heatmaps with all the doses in the same plot #####
 
 #filter dt_dd
 dt_dd_filt <- dt_dd
-#idx <- (dt_dd_filt$Dose_ID != 'SHP2i_GDC1971[SHP2i_50mg.csv]')
-# idx <- ((dt_dd_filt$Dose_ID == 'SHP2i_GDC1971[SHP2i_20mg.csv]') &
-#        (dt_dd_filt$Dose_ID_2 == 'KRASG12Ci_GDC6036[KRASi_400mg.csv]')) |
-#        ((dt_dd_filt$Dose_ID == 'SHP2i_GDC1971[SHP2i_60mg.csv]') &
-#        (dt_dd_filt$Dose_ID_2 == 'KRASG12Ci_GDC6036[KRASi_400mg.csv]')) |
-#        ((dt_dd_filt$Dose_ID == 'SHP2i_GDC1971[SHP2i_20mg.csv]') &
-#        (dt_dd_filt$Dose_ID_2 == 'KRASG12Ci_GDC6036[KRASi_100mg.csv]')) |
-#        ((dt_dd_filt$Dose_ID == 'SHP2i_GDC1971[SHP2i_60mg.csv]') &
-#         (dt_dd_filt$Dose_ID_2 == 'KRASG12Ci_GDC6036[KRASi_100mg.csv]')) 
-#dt_dd_filt <- dt_dd_filt[idx,]
-
-uclid_drugs <- unique(dplyr::select(dt_dd_filt, c('CellLineName', 'Gnumber', 'Gnumber_2')))
-rownames(uclid_drugs) <- NULL
+uclines_drugs <- unique(dplyr::select(dt_dd_filt, c('CellLineName', 'DrugName', 'DrugName_2')))
+rownames(uclines_drugs) <- NULL
 #for each cell line and drug combination
-p_smooth <- list()
+p_matv <- list()
 #for each cell line and drug combo
-for (i in 1:nrow(uclid_drugs)){
+for (i in 1:nrow(uclines_drugs)){
   #extract Rel.vial or GR, HSA and Bliss from QCS_combo
   for (j in 1:length(assay_ID)){
     assay <- assay_ID[j]
     field <- field_ID[j]
-    smooth <- dt_QCS_combo[[assay]]
-    idx <- ((smooth$CellLineName==uclid_drugs[i, c('CellLineName')]) &
-              (smooth$Gnumber==uclid_drugs[i, c('Gnumber')]) &
-              (smooth$Gnumber_2==uclid_drugs[i, c('Gnumber_2')]))
-    smooth <- smooth[idx, ]
-    if ('normalization_type' %in% colnames(smooth)){
-      idx <- (smooth$normalization_type==gtf$short)
-      smooth <- smooth[idx, ]
+    matv <- combo[[assay]]
+    idx <- ((matv$CellLineName==uclines_drugs[i, c('CellLineName')]) &
+              (matv$DrugName==uclines_drugs[i, c('DrugName')]) &
+              (matv$DrugName_2==uclines_drugs[i, c('DrugName_2')]))
+    matv <- matv[idx, ]
+    if ('normalization_type' %in% colnames(matv)){
+      groups <- c("normalization_type")
+      wide_cols <- c('x')
+      matv <- gDRutils::flatten(matv, groups = groups, wide_cols = wide_cols)
     }
     
-    if (nrow(smooth)>1) {
+    if (nrow(matv)>1) {
       #use free concentrations to plot
-      smooth$Concentration <- smooth$free_Concentration
-      smooth$Concentration_2 <- smooth$free_Concentration_2
-      smooth <- createLogConcentrations(smooth)
+      matv$Concentration <- matv$free_Concentration
+      matv$Concentration_2 <- matv$free_Concentration_2
+      matv <- createLogConcentrations(matv)
       if (mixmax_fields[j]==1) {
-        mine <- min(c(0.0, min(na.omit(smooth[,..field]))))
-        maxe <- max(c(1.1, max(na.omit(smooth[,..field])))) 
+        mine <- min(c(0.0, min(na.omit(matv[,..field]))))
+        maxe <- max(c(1.1, max(na.omit(matv[,..field])))) 
         cdotdose <- 'black'
       } else if (mixmax_fields[j]==2) {
-        tope <- max(abs(c(min(na.omit(smooth[,..field])), 
-                          max(na.omit(smooth[,..field])))))
+        tope <- max(abs(c(min(na.omit(matv[,..field])), 
+                          max(na.omit(matv[,..field])))))
         mine <- min(c(-0,3,-tope))
         maxe <- max(c(0.3, tope))
         cdotdose <- 'black'
       }
       limits <- c(mine,maxe)
       #calculate width and height of each tile for geom_tile
-      smooth$x <- smooth$logConcentration
-      smooth$y <- smooth$logConcentration_2
-      ux <- unique(smooth$x)
-      uy <- unique(smooth$y)
+      matv$x <- matv$logConcentration
+      matv$y <- matv$logConcentration_2
+      ux <- unique(matv$x)
+      uy <- unique(matv$y)
       diffux <- diff(ux)/2
       diffuy <- diff(uy)/2
       #calculate width left and right (wl, wr) and height up and down (hu, hd)
-      smooth$wl=plyr::mapvalues(smooth$x, ux, c(diffux[1],diffux))
-      smooth$wr=plyr::mapvalues(smooth$x, ux, c(diffux,diffux[length(diffux)]))
-      smooth$hu=plyr::mapvalues(smooth$y, uy, c(diffuy,diffuy[length(diffuy)]))
-      smooth$hd=plyr::mapvalues(smooth$y, uy, c(diffuy[1],diffuy))
+      matv$wl=plyr::mapvalues(matv$x, ux, c(diffux[1],diffux))
+      matv$wr=plyr::mapvalues(matv$x, ux, c(diffux,diffux[length(diffux)]))
+      matv$hu=plyr::mapvalues(matv$y, uy, c(diffuy,diffuy[length(diffuy)]))
+      matv$hd=plyr::mapvalues(matv$y, uy, c(diffuy[1],diffuy))
       #calculate xmin, xmax, ymin, ymax for geom_rect
-      smooth$xmin <- (smooth$x - smooth$wl)
-      smooth$xmax <- (smooth$x + smooth$wr)
-      smooth$ymin <- (smooth$y - smooth$hd)
-      smooth$ymax <- (smooth$y + smooth$hu)
-      colors_smooth <- colors_fields[[j]]
-      p_smooth[[length(p_smooth)+1]] <- ggplot()  +
-        geom_rect(data=smooth, 
+      matv$xmin <- (matv$x - matv$wl)
+      matv$xmax <- (matv$x + matv$wr)
+      matv$ymin <- (matv$y - matv$hd)
+      matv$ymax <- (matv$y + matv$hu)
+      colors_matv <- colors_fields[[j]]
+      p_matv[[length(p_matv)+1]] <- ggplot()  +
+        geom_rect(data=matv, 
                   aes_string(xmin = 'xmin', xmax = 'xmax', 
                              ymin = 'ymin', ymax = 'ymax', 
                              fill = field)) +
         labs(title=sprintf('%s', 
-                           uclid_drugs[i, c('CellLineName')])) +
-        xlab(paste(unique(smooth$DrugName),'uM'))+
-        ylab(paste(unique(smooth$DrugName_2),'uM')) +
-        scale_fill_gradientn(colours = colors_smooth, limits=limits) +
+                           uclines_drugs[i, c('CellLineName')])) +
+        xlab(paste(unique(matv$DrugName),'uM'))+
+        ylab(paste(unique(matv$DrugName_2),'uM')) +
+        scale_fill_gradientn(colours = colors_matv, limits=limits) +
         ggpubr::theme_pubr() +
         labs(fill = title_ID[j]) +
         theme(text = element_text(size=7),
@@ -739,51 +734,15 @@ for (i in 1:nrow(uclid_drugs)){
               legend.position = "right"
         )
       
-      #if requested, plot IC50 isobolograms
-      # if (IC50bols[j] == 1){
-      #   ic_sel=c("0.5")
-      #   dt_isobolograms <- dt_QCS_combo[['isobolograms']]
-      #   idx <- ((dt_isobolograms$CellLineName==uclid_drugs[i, c('CellLineName')]) &
-      #             (dt_isobolograms$Gnumber==uclid_drugs[i, c('Gnumber')]) &
-      #             (dt_isobolograms$Gnumber_2==uclid_drugs[i, c('Gnumber_2')]))
-      #   dt_isobolograms <- dt_isobolograms[idx, ]
-      #   dt_isobolograms <- dt_isobolograms[dt_isobolograms$normalization_type==gtf$short]
-      #   dt_isobolograms <- dt_isobolograms[dt_isobolograms$iso_level %in% ic_sel]
-      #   if (nrow(dt_isobolograms)>1) {
-      #     ##### ATTENTION !!!!! ### CONVERSION DONE MANUALLY BECAUSE NEED NEW CODE TO CONVERT
-      #     #### POS_REF AND POS_ in ISOBOLOGRAM FOR FREE DRUG
-      #     dt_isobolograms$pos_x <- dt_isobolograms$pos_x + (log10(0.06))
-      #     dt_isobolograms$pos_y <- dt_isobolograms$pos_y + (log10(0.11))
-      #     dt_isobolograms$pos_x_ref <- dt_isobolograms$pos_x_ref + (log10(0.06))
-      #     dt_isobolograms$pos_y_ref <- dt_isobolograms$pos_y_ref + (log10(0.11))
-      #     #prepare isobologram for proper plotting with x_pos and x_pos_ref
-      #     dt_isob_proper <- dplyr::select(dt_isobolograms, -c('pos_x_ref','pos_y_ref'))
-      #     dt_isob_proper_2 <- dplyr::select(dt_isobolograms, -c('pos_x','pos_y'))
-      #     dt_isob_proper_2 <- dplyr::rename(dt_isob_proper_2, pos_x = pos_x_ref , pos_y = pos_y_ref)
-      #     dt_isob_proper$iso_source <- 'measured'
-      #     dt_isob_proper_2$iso_source <- 'expected'
-      #     dt_isob_proper <- rbind(dt_isob_proper, dt_isob_proper_2)
-      #     colors_iso <- colorRampPalette(c("red", "purple"))(length(unique(dt_isob_proper$iso_level)))
-      #     dt_isob_proper$iso_level <- factor(dt_isob_proper$iso_level)
-      #     dt_isob_proper$iso_source <- factor(dt_isob_proper$iso_source)
-      #     #add isobologram to plot
-      #     p_smooth[[length(p_smooth)]] <- p_smooth[[length(p_smooth)]] + 
-      #       geom_line(data=dt_isob_proper, 
-      #                 aes(x = pos_y, y = pos_x, color = iso_level, linetype= iso_source) ,size = 2) +
-      #       scale_colour_manual(values = colors_iso) +
-      #       scale_x_continuous(expand = c(0, 0)) +
-      #       scale_y_continuous(expand = c(0, 0)) 
-      #   }
-      # }
       #plot all the concentrations that were tested
       dt_dd_sub <- dt_dd_filt
-      idx <- ((dt_dd_sub$CellLineName==uclid_drugs[i, c('CellLineName')]) &
-                (dt_dd_sub$Gnumber==uclid_drugs[i, c('Gnumber')]) &
-                (dt_dd_sub$Gnumber_2==uclid_drugs[i, c('Gnumber_2')]))
+      idx <- ((dt_dd_sub$CellLineName==uclines_drugs[i, c('CellLineName')]) &
+                (dt_dd_sub$DrugName==uclines_drugs[i, c('DrugName')]) &
+                (dt_dd_sub$DrugName_2==uclines_drugs[i, c('DrugName_2')]))
       dt_dd_sub <- dt_dd_sub[idx, ]
       for (j in 1:nrow(dt_dd_sub))
         #plot the dd concentrations on x and y axis 
-        p_smooth[[length(p_smooth)]] <- p_smooth[[length(p_smooth)]] +
+        p_matv[[length(p_matv)]] <- p_matv[[length(p_matv)]] +
         geom_point(data=dt_dd_sub[j,],
                    aes(x = log10(DD), y = log10(DD_2)), colour = cdotdose, shape= 10, size = 3, stroke = 1)
       
@@ -793,11 +752,11 @@ for (i in 1:nrow(uclid_drugs)){
 }
 
 #save heatmaps with concentration plots
-file_res <- sprintf('Heatmaps_DA_all_doses_in_one_%s_%s.pdf', gtf$short, dataset_name)
+file_res <- sprintf('Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
 ncol <- length(assay_ID)
-nrow <- length(p_smooth)/ncol
-pdf(file.path(cwd, figures_dir, fig_sub_dir ,file_res), width= 5.5 * ncol , height=5 * nrow  )  
-print(grid.arrange(grobs = p_smooth, ncol=length(assay_ID)))
+nrow <- length(p_matv)/ncol
+pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width= 5.5 * ncol , height=5 * nrow  )  
+print(grid.arrange(grobs = p_matv, ncol=length(assay_ID)))
 dev.off()
 
 

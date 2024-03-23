@@ -26,8 +26,11 @@ figures_dir='figures'
 
 ### LOAD DATA ###
 
+### load combo data from higher resolution matrixes
+
 #load combo
-combo <- readRDS(file.path(cwd, data_dir, 'Drug_screen', 'Drug_screen_Belva_Cobi_combo_metrics.RDS'))
+#combo <- readRDS(file.path(cwd, data_dir, 'Drug_screen', 'Drug_screen_Belva_Cobi_combo_metrics.RDS'))
+combo <- readRDS(file.path(cwd, data_dir, 'Dose_projections', 'Zoomed_in_Belva_Cobi_combo_metrics.RDS'))
 #load smooth matrix
 smooth <- combo$SmoothMatrix
 #keep only Belvarafenib and Cobimetinib
@@ -35,7 +38,7 @@ smooth <- smooth[smooth$DrugName == 'panRAFi_Belvarafenib' & smooth$DrugName_2 =
 #prepare annotations of mutations
 anno <- readRDS(file.path(cwd, data_dir, 'Drug_screen', 'Drug_screen_cell_line_annotations.RDS'))
 #add annotations
-smooth <-  merge(smooth, anno , by='CellLineName')
+smooth <-  merge(smooth, anno , by='CellLineName',  all.x = TRUE)
 
 ### Prompt dataset information ###
 message('Cell lines: ', length(unique(smooth$CellLineName)))
@@ -59,7 +62,7 @@ if (choise_gtf == 0){
 ## DAsses -> dataframe that specifies for which SA or Combo we should asses viability values
 
 #set % FBS in media
-used_FBS_perc = 10
+used_FBS_perc = 5
 
 #load the DDoses definitions and generate unique IDs
 DDoses <- data.frame(read.csv(file.path(cwd, data_dir, 'Dose_projections', 'DDoses.csv')))
@@ -74,8 +77,9 @@ idx <- smooth[['NRAS_mut']]=='yes' & smooth[['BRAF_mut']]=='no'
 CGroups[['NRAS_mut']] <-  unique(smooth[idx,..fgroup])
 
 #BRAF V600E selected
+idx <- smooth$CellLineName %in% c('A-375')
 #idx <- smooth$CellLineName %in% c('A-375', 'WM−266−4', 'SK-MEL-28')
-#CGroups[['BRAF_mut']] <-  unique(smooth[idx,..fgroup])
+CGroups[['BRAF_mut']] <-  unique(smooth[idx,..fgroup])
 
 #WT sensitive
 #idx <- smooth$CellLineName %in% c('OVCA 420','HT-115')
@@ -541,7 +545,7 @@ dev.off()
 #go through each cell line and drug combination
 assay_ID <- c("SmoothMatrix", "HSAExcess", "BlissExcess")
 title_ID <- c(gtf$long, "HSA Excess", "Bliss Excess")
-field_ID <- c(gtf$long, "excess", "excess")
+field_ID <- c(gtf$long, gtf$long, gtf$long)
 colors_fields <- list()
 if (gtf$short =='RV'){
   colors_fields[[1]] <- viridis(51)

@@ -1,0 +1,4 @@
+DrugName,dd,dd_min,dd_max,title
+panRAFi_Belvarafenib,0.008,0.008,0.008,15mgkg_QD
+panRAFi_Belvarafenib,0.020,0.020,0.020,30mgkg_QD
+MEKi_Cobimetinib,0.003,0.003,0.003,5mgkg_QD

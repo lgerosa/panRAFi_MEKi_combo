@@ -2,14 +2,15 @@
 # by Luca Gerosa and Andrew Goetz
 #
 #analyse the RAF/MEK screen:
-#1. Plot SA response metrics with annotated mutations and lineage of cell lines
-#2. Plot drug combo response metrics with annotated mutations and lineage of cell lines
-#3. Study dose range of combination of RAF/MEK
+#1. Plot SA response metrics (IC50, AUC, Emax)
+#2. Plot drug combo response metrics (HSA, Bliss)
+#3. Plot individual cell line heatmaps 
 
 library(ggplot2)
 library(gridExtra)
 library(dplyr)
 library(viridis)
+library(gDRutils)
 
 #set working directory
 cwd <- "/gstore/home/gerosal/projects/work/panRAFi_MEKi_combo"
@@ -50,7 +51,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(combo$RawTreated, c('DrugName
 #decide which metrics to plot
 gtf <- list()
 choise_gtf <- 0
-if (choise_gtf ==0){
+if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
 } else{
@@ -132,18 +133,23 @@ for (i in 1:length(aqm)) {
   combo_met <- combo[[aqm[i]]]
   
   #filter for the wanted growth measure
-  combo_met <- combo_met[combo_met$normalization_type == gtf$short, ]
+  field <- sprintf('%s_x', gtf$short)
+  groups <- c("normalization_type")
+  wide_cols <- c('x')
+  combo_met <- gDRutils::flatten(combo_met, groups = groups, wide_cols = wide_cols)
+  
+  #combo_met <- combo_met[combo_met$normalization_type == gtf$short, ]
   
   #order according to mutations 
   combo_met <- merge(combo_met, anno , by='CellLineName')
-  combo_met <- data.table::setorderv(combo_met, c('BRAF_mut', "NRAS_mut", 'x'))
+  combo_met <- data.table::setorderv(combo_met, c('BRAF_mut', "NRAS_mut", gtf$long))
    
   #create field with both drugs
   combo_met$Drugs_combo_name <- paste(combo_met$DrugNamePlot, combo_met$DrugNamePlot_2, sep=' x ')
   #dcast to matrix format the HSA score
   Combo_heatmap <- data.table::dcast(combo_met, 
                                      factor(CellLineName, levels =unique(CellLineName)) ~  factor(Drugs_combo_name), 
-                                     value.var = 'x')
+                                     value.var = gtf$long)
   Combo_heatmap <- as.data.frame(Combo_heatmap)
   # make clids rownames
   rownames(Combo_heatmap)<- Combo_heatmap$CellLineName
@@ -222,8 +228,6 @@ clines <- cell_lines_sel
 drug <- clines_drugs$DrugName
 drug_2 <- clines_drugs$DrugName_2
 
-
-
 #plots
 p <- list()
 #for each cell line and drug combo combination
@@ -251,20 +255,22 @@ for (i in 1:length(clines)){
   }
   
   #plot matrix
-  field <- 'x' # sprintf('%s', gtf$long)
+  field <- sprintf('%s', gtf$long)
   dt_smooth <- combo_sub[['SmoothMatrix']]
-    #filter by normalization_type
-  dt_smooth <- dt_smooth[dt_smooth$normalization_type==gtf$short,]
+  groups <- c("normalization_type")
+  wide_cols <- c('x')
+  dt_smooth <- gDRutils::flatten(dt_smooth, groups = groups, wide_cols = wide_cols)
   mine <- min(c(minF, min(na.omit(dt_smooth[,..field]))))
   maxe <- max(c(maxF, max(na.omit(dt_smooth[,..field])))) 
   limits <- c(mine,maxe)
   p[[length(p)+1]]<- plotHeatMapCombo(dt_smooth, field, limits, colors)
 
   #plot Bliss Excess
-  field <- 'excess' #sprintf('%s', gtf$long)
+  field <- sprintf('%s_excess', gtf$short)
   dt_smooth <- combo_sub[['BlissExcess']]
-  #filter by normalization_type
-  dt_smooth <- dt_smooth[dt_smooth$normalization_type==gtf$short,]
+  groups <- c("normalization_type")
+  wide_cols <- c('excess')
+  dt_smooth <- gDRutils::flatten(dt_smooth, groups = groups, wide_cols = wide_cols)
   colors <- colorRampPalette(c("royalblue3", "royalblue1", "grey95" , "grey95" , "firebrick1", "firebrick3"))(51)
   mine <- min(c(-0.7, min(na.omit(dt_smooth[,..field]))))
   maxe <- max(c(0.7, max(na.omit(dt_smooth[,..field])))) 

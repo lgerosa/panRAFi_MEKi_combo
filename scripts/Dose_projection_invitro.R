@@ -2,7 +2,7 @@
 # by Luca Gerosa and Andrew Goetz
 #
 #analyse the RAF/MEK screen:
-#1. Study dose range of combination of RAF/MEK
+#1. Study dose range of combination of RAF/MEK in cell lines
 
 library(ggplot2)
 library(gridExtra)

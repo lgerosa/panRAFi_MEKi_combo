@@ -47,7 +47,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(smooth, c('DrugName','DrugNam
 
 #decide which metrics to use
 gtf <- list()
-choise_gtf <- 1
+choise_gtf <- 0
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -586,7 +586,7 @@ for (i in unique(dt_dd$CellLineName)) {
   bliss_long <- reshape2::melt(bliss_matrix-combo_matrix)
   pall_hm[[length(pall_hm)+1]] <- ggplot(bliss_long, aes(x = Var1, y = Var2))+
     geom_tile(aes(fill=value))+xlab(drug_1) +
-    ylab(drug_2) +
+    geom_text(aes(label = round(value, 2)))+ylab(drug_2) +
     ggtitle(sprintf("%s\nBliss Excess",i)) + 
     scale_fill_gradient2(
       low = "royalblue2", 
@@ -600,27 +600,35 @@ for (i in unique(dt_dd$CellLineName)) {
     theme(axis.line = element_line(colour = "black"))
   #scale_fill_viridis(discrete=FALSE,limits=range(-.5,1))
   
+  if (gtf$short =='RV'){
+    midpoint_val <- 0.5
+    min_val <- 0}
+  else{
+    midpoint_val <- 0
+    min_val <- -0.5
+  }
+  
   # Generates combo heatmaps
   combo_long <- reshape2::melt(combo_matrix)
   pall_hm[[length(pall_hm)+1]] <- ggplot(combo_long, aes(x = Var1, y = Var2))+
     geom_tile(aes(fill=value))+xlab(drug_1) +
-    ylab(drug_2) +
+    geom_text(aes(label = round(value, 2)))+ylab(drug_2) +
     ggtitle(sprintf("%s\nCombo",i)) + 
     scale_fill_gradient2(
       low = "royalblue2", 
       mid = "white", 
       high = "firebrick2", 
-      midpoint = 0,
-      limits=range(-.5,1),
+      midpoint = midpoint_val,
+      limits=range(min_val,1),
       name = "Combo"
     )+theme(plot.title = element_text(hjust = 0.5))+ 
     theme(panel.background = element_blank())+ 
     theme(axis.line = element_line(colour = "black"))
 }
 
-#save in vivo prediction heatmaps
+#save in dose projection heatmaps
 print(p)
-file_res <- sprintf('Andrew_In_Vivo_Pred_Heatmaps_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Dose_Projection_Heatmaps_%s.pdf', gtf$short)
 nrow <- length(pall_hm) %/% 2
 pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width=6 * 2, height=5*nrow )  
 print(grid.arrange(grobs = pall_hm, ncol=2))

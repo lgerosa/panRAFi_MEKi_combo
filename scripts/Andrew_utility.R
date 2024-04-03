@@ -379,7 +379,7 @@ plotComboAgentFit <- function(combo, clines_drugs, gtf, plot_ID) {
 
 
 
-getInvitroEffects <- function(smooth_loc,CGroups_loc,DDoses_loc,gtf_loc){
+getProjectedPKEffects <- function(smooth_loc,CGroups_loc,DDoses_loc,gtf_loc){
   # Projects free drug concentrations derived from PK range (min, mean, max) to in-vitro response
   
   #load isobologram data and define quantities to use

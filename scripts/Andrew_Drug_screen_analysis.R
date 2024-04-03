@@ -51,7 +51,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(combo$RawTreated, c('DrugName
 
 #decide which metrics to plot
 gtf <- list()
-choise_gtf <- 0
+choise_gtf <- 1
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'

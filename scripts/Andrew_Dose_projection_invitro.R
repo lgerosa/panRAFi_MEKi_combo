@@ -47,7 +47,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(smooth, c('DrugName','DrugNam
 
 #decide which metrics to use
 gtf <- list()
-choise_gtf <- 1
+choise_gtf <- 0
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -120,7 +120,7 @@ wide_cols <- c('x')
 smooth <- gDRutils::flatten(smooth, groups = groups, wide_cols = wide_cols)
 
 # Projects free drug concentrations derived from PK range (min, mean, max) to in-vitro response
-dt_dd <- getInvitroEffects(smooth, CGroups, DDoses,gtf)
+dt_dd <- getProjectedPKEffects(smooth, CGroups, DDoses,gtf)
 
 ## Plot dose regime for each group (each a  pdf page)
 cgroups_ids <- names(CGroups) 

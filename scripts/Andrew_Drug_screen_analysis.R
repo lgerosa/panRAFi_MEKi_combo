@@ -18,7 +18,7 @@ cwd <- "/Users/andrewgoetz/Documents/Luca_Projects/panRAFi_MEKi_combo"
 setwd(cwd)
 
 #load utility functions
-source(paste(cwd,'/scripts/utility.R', sep=''))
+source(paste(cwd,'/scripts/Andrew_utility.R', sep=''))
 
 #set directory names
 data_dir = 'data'
@@ -51,7 +51,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(combo$RawTreated, c('DrugName
 
 #decide which metrics to plot
 gtf <- list()
-choise_gtf <- 1
+choise_gtf <- 0
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'

@@ -17,7 +17,7 @@ cwd <- "/Users/andrewgoetz/Documents/Luca_Projects/panRAFi_MEKi_combo"
 setwd(cwd)
 
 #load utility functions
-source(paste(cwd,'/scripts/utility.R', sep=''))
+source(paste(cwd,'/scripts/Andrew_utility.R', sep=''))
 
 #set directory names
 data_dir = 'data'
@@ -47,7 +47,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(smooth, c('DrugName','DrugNam
 
 #decide which metrics to use
 gtf <- list()
-choise_gtf <- 0
+choise_gtf <- 1
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -86,12 +86,6 @@ CGroups[['BRAF_mut']] <-  unique(smooth[idx,..fgroup])
 #idx <- smooth$CellLineName %in% c('OVCA 420','HT-115')
 #CGroups[['WT']] <-  unique(smooth[idx,..fgroup])
 
-
-#load isobologram data and define quantities to use
-clines_drugs <- unique(select(smooth, c('CellLineName','DrugName', 'DrugName_2')))
-ord_cols <- c('DrugName', 'DrugName','CellLineName')
-clines_drugs <- data.table::setorderv(clines_drugs, ord_cols)
-
 #convert Concentrations to Concentrations_free using FuDrugs
 FuDrugs <- data.frame(read.csv(file.path(cwd, data_dir, 'Dose_projections', 'FuDrugs.csv')))
 FuDrugs <- FuDrugs[FuDrugs$FBS_perc==used_FBS_perc, ]
@@ -125,127 +119,8 @@ groups <- c("normalization_type")
 wide_cols <- c('x')
 smooth <- gDRutils::flatten(smooth, groups = groups, wide_cols = wide_cols)
 
-#merge doses 
-DDoses_temp <- DDoses
-DDoses_temp$Dose_ID_2 <- DDoses_temp$Dose_ID
-DDoses_temp$DrugName_2 <- DDoses_temp$DrugName
-clines_drugs <- merge(clines_drugs, dplyr::select(DDoses_temp, c('DrugName','Dose_ID')), by='DrugName',  allow.cartesian=TRUE)
-clines_drugs <- merge(clines_drugs, dplyr::select(DDoses_temp, c('DrugName_2','Dose_ID_2')), by='DrugName_2',  allow.cartesian=TRUE)
-
-#create struture to save results 
-col_names_dd <- c('CellLineName',
-                  'DrugName', 'DrugName_2', 
-                  'Dose_ID', 'Dose_ID_2', 'Metric',
-                  'DD', 'DD_min', 'DD_max',
-                  'DD_2', 'DD_min_2', 'DD_max_2',
-                  'SA', 'SA_min', 'SA_max',
-                  'SA_2', 'SA_min_2', 'SA_max_2',
-                  'Combo', 'Combo_min', 'Combo_max',
-                  'HSA', 'HSA_min', 'HSA_max',
-                  'Bliss', 'Bliss_min', 'Bliss_max')
-dt_dd <- data.frame(matrix(ncol = length(col_names_dd), nrow = 0))
-colnames(dt_dd) <- col_names_dd
-
-#do calculations only for cells that are at least in one group
-allCellLines <- c()
-allNames <- names(CGroups)
-for (i in 1:length(allNames)){
-  allCellLines <- c(allCellLines, CGroups[[allNames[i]]][[1]])
-}
-allCellLines <- unique(allCellLines)
-idx <- clines_drugs$CellLineName %in% allCellLines
-clines_drugs <- clines_drugs[idx,]
-
-#extract SA or combo metrics for each drug and cell line at defined concentration range
-for (i in 1:nrow(clines_drugs)) {
-  #extract cell lines and drugs
-  cln <- clines_drugs[['CellLineName']][i]
-  drug <- clines_drugs[['DrugName']][i]
-  drug_2 <- clines_drugs[['DrugName_2']][i]
-  dose_id <- clines_drugs[['Dose_ID']][i]
-  dose_id_2 <- clines_drugs[['Dose_ID_2']][i]
-  
-  #use smooth matrix to get measured values
-  idx <- (smooth$CellLineName==cln) &
-         (smooth$DrugName==drug) &
-         (smooth$DrugName_2==drug_2) 
-  dt_smooth_sub <- smooth[idx,]
-  #use interpolation to extract growth metrics at SA and combo doses
-  smooth_matrix <- reshape2::acast(dt_smooth_sub, free_Concentration ~ free_Concentration_2, value.var = gtf$long)
-  idx <- (dt_smooth_sub$free_Concentration==0)
-  x <- sort(dt_smooth_sub$free_Concentration_2[idx])
-  idx <- (dt_smooth_sub$free_Concentration_2==0)
-  y <- sort(dt_smooth_sub$free_Concentration[idx])
-  
-  #extract values to interpolate
-  idx <- (DDoses$Dose_ID==dose_id)
-  dd <- DDoses[idx, c('dd', 'dd_min', 'dd_max')]
-  dd <- c(dd$dd, dd$dd_min, dd$dd_max)
-  idx <- (DDoses$Dose_ID==dose_id_2)
-  dd_2 <- DDoses[idx, c('dd', 'dd_min', 'dd_max')]
-  dd_2 <- c(dd_2$dd, dd_2$dd_min, dd_2$dd_max)
-  #interpolate at SA and combo areas
-  iv <- pracma::interp2(x  = x, 
-                        y  = y, 
-                        Z = smooth_matrix, 
-                        xp = c(dd_2, c(0,0,0), dd_2), 
-                        yp = c(c(0,0,0), dd, dd)
-  )
-  
-  #HSA direct calculation
-  # Andrew - There are cases where the mean HSA and min/max HSA
-  # result from different agents
-  iv_hsa <- c()
-  iv_hsa[1] <- min(c(iv[1],iv[4]),na.rm = TRUE)
-  iv_hsa[2] <- min(c(iv[2],iv[5]),na.rm = TRUE)
-  iv_hsa[3] <- min(c(iv[3],iv[6]),na.rm = TRUE)
-  #if((iv[1]<iv[4]) | is.na(iv[4])){
-  #  iv_hsa[1] <- iv[1]
-  #  iv_hsa[2] <- iv[2]
-  #  iv_hsa[3] <- iv[3]
-  #}else{
-  #  iv_hsa[1] <- iv[4]
-  #  iv_hsa[2] <- iv[5]
-  #  iv_hsa[3] <- iv[6]
-  #}
-  
-  #calculate Bliss using gDR
-  sa2 <- dt_smooth_sub[dt_smooth_sub[['free_Concentration']] == 0,]
-  sa2 <- dplyr::select(sa2, c('free_Concentration', 'free_Concentration_2', gtf$long))
-  colnames(sa2) <- c("free_Concentration",   "free_Concentration_2", "x")
-  sa1 <- dt_smooth_sub[dt_smooth_sub[['free_Concentration_2']] == 0,]
-  sa1 <- dplyr::select(sa1, c('free_Concentration', 'free_Concentration_2', gtf$long))
-  colnames(sa1) <- c("free_Concentration",   "free_Concentration_2", "x")
-  dt_bliss <- gDRcore::calculate_Bliss(sa1, 'free_Concentration', sa2, 'free_Concentration_2', 'x')
-  bliss_matrix <- reshape2::acast(dt_bliss, free_Concentration ~ free_Concentration_2, value.var = 'metric')
-  y_bliss <- sort(sa1$free_Concentration)
-  x_bliss <- sort(sa2$free_Concentration_2)
-  iv_bliss <- pracma::interp2(x  = x_bliss, 
-                              y  = y_bliss, 
-                              Z = bliss_matrix, 
-                              xp = dd_2, 
-                              yp = dd
-  )
-  
-  #save values 
-  dd_temp <- c(cln, 
-               drug, drug_2, 
-               dose_id, dose_id_2, gtf$long,
-               dd[1], dd[2], dd[3],
-               dd_2[1], dd_2[2], dd_2[3],
-               iv[4], iv[5], iv[6],
-               iv[1], iv[2], iv[3],
-               iv[7], iv[8], iv[9], 
-               iv_hsa[1], iv_hsa[2], iv_hsa[3],
-               iv_bliss[1], iv_bliss[2], iv_bliss[3]
-  )
-  dt_dd_temp <- data.frame(matrix(ncol = length(col_names_dd), nrow = 1, dd_temp))
-  colnames(dt_dd_temp) <- col_names_dd
-  #add to full dataset
-  dt_dd <- rbind(dt_dd, dt_dd_temp)
-}  
-#convert numbers back froms string
-dt_dd[, c(7:27)] <- sapply(dt_dd[, c(7:27)], as.numeric)
+# Projects free drug concentrations derived from PK range (min, mean, max) to in-vitro response
+dt_dd <- getInvitroEffects(smooth, CGroups, DDoses,gtf)
 
 ## Plot dose regime for each group (each a  pdf page)
 cgroups_ids <- names(CGroups) 

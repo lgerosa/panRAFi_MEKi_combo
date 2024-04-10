@@ -159,7 +159,7 @@ for (i in 1:length(aqm)) {
   Combo_heatmap <- Combo_heatmap[!apply(is.na(Combo_heatmap), 1, all), ]
   
   #define colors and breaks
-  breaks <- seq(from=-0.7, to=0.7, length.out=50)
+  breaks <- seq(from=-0.5, to=0.5, length.out=50)
   hmcol <- rev(colorRampPalette(c("royalblue2", "royalblue1", "grey95" , "grey95" , "firebrick1", "firebrick2"))(51))
   
   #transpose
@@ -169,7 +169,7 @@ for (i in 1:length(aqm)) {
   rownames(t_Combo_heatmap) <- colnames(Combo_heatmap)
   #heatmap 
   p[[i]] <- pheatmap::pheatmap(t_Combo_heatmap, scale="none", display_numbers = TRUE, fontsize_number=10, number_color = "black",
-                               na_col = "white", angle_col = 45, fontsize=10, breaks=breaks, color=rev(hmcol),
+                               na_col = "white", angle_col = 90, fontsize=10, breaks=breaks, color=rev(hmcol),
                                treeheight_row = 30, treeheight_col = 30,
                                #labels_col=labels_row$CellLineName,
                                annotation_col=anno_hm, 

@@ -70,7 +70,6 @@ Belva_uM_free_conc <- t(matrix(Belva_uM_free_conc, nrow=3, ncol=length(Belva_rna
 rownames(Belva_uM_free_conc) <- Belva_rnames
 colnames(Belva_uM_free_conc) <- drug_ng_ml_cnames
 
-
 #### CREATE DOSES  ####
 DDoses = data.frame(DrugNamePlot = character(), 
                     dd = numeric(), 

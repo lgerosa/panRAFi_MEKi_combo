@@ -147,8 +147,6 @@ mixmax_fields <- c(1,2,2) #1 for GR, Rel, 2 for HSA and Bliss, method to calcula
 #add free concentration vectors  
 smooth <- add_free_Concentrations(smooth, FuDrugs)
 
-#belva_pk <- filter(belva_pk,Dose_ID %in% )
-
 
 ### Prompt dataset information ###
 
@@ -175,9 +173,6 @@ cobi_pk$DrugName_2 <- "MEKi_Cobimetinib"
 
 # Combines PK data into single dataframe
 dose_response <- merge(belva_pk, cobi_pk, by=c("ID","time"))
-
-#single_time_DR <- filter(dose_response,time == 714)
-
 dose_response <- dose_response[order( dose_response$ID, dose_response$time ),]
 
 #flatten
@@ -186,11 +181,11 @@ groups <- c("normalization_type")
 wide_cols <- c('x')
 smooth <- gDRutils::flatten(smooth, groups = groups, wide_cols = wide_cols)
 
+# grabs cell lines which will be used
 smooth <- filter(smooth,CellLineName %in% cellLinesToUse)
 
 
 
-#go through each cell line and drug combination
 assay_ID <- c("SmoothMatrix", "HSAExcess", "BlissExcess")
 title_ID <- c(gtf$long, "HSA Excess", "Bliss Excess")
 field_ID <- c(gtf$long, gtf$long, gtf$long)
@@ -206,6 +201,7 @@ colors_fields[[3]] <- colorRampPalette(c("royalblue3", "royalblue1", "grey95" , 
 
 projected_doses <- getProjectedPKEffects(smooth,dose_response,gtf)
 uIDs <- unique(projected_doses$ID)
+
 # IDs without values lying outside of interpolation range
 vIDs <- c()
 for (i in 1:length(uIDs)){
@@ -220,20 +216,22 @@ dt_dd_filt <- projected_doses
 uclines_drugs <- unique(dplyr::select(dt_dd_filt, c('CellLineName', 'DrugName', 'DrugName_2')))
 
 
-
+smooth_min_1 <- min(sort(smooth$free_Concentration)[sort(smooth$free_Concentration)!=0])
+smooth_min_2 <- min(sort(smooth$free_Concentration_2)[sort(smooth$free_Concentration_2)!=0])
+#ud2 <- sort(smooth$free_Concentration_2)
+#ud2 <- ud2[ud2!=0]
+#ud2 <- c(min(ud2),max(ud2))
 
 patient_ID_to_plot <- hash()
 for (k in 1:dose_count){
   projected_doses_filtered <- filter(projected_doses,projected_doses$CellLineName==uclines_drugs[1, c('CellLineName')],projected_doses$Dose_ID==belva_Doses_To_Use[k],projected_doses$Dose_ID_2==cobi_Doses_To_Use[k])
   
+  # used to reject values which are too small 
   plot_able_IDs <- c()
-  
   for (ID_val in unique(projected_doses_filtered$ID)){
     min_invitro_1 <- min(filter(projected_doses_filtered,projected_doses_filtered$ID == ID_val)$free_Concentration)
-    max_invitro_1 <- max(filter(projected_doses_filtered,projected_doses_filtered$ID == ID_val)$free_Concentration)
     min_invitro_2 <- min(filter(projected_doses_filtered,projected_doses_filtered$ID == ID_val)$free_Concentration_2)
-    max_invitro_2 <- max(filter(projected_doses_filtered,projected_doses_filtered$ID == ID_val)$free_Concentration_2)
-    if ((min_invitro_1>min(ud1)) & (max_invitro_1<max(ud1))&(min_invitro_2>min(ud2)) & (max_invitro_2<max(ud2))){
+    if ((min_invitro_1>smooth_min_1) & (min_invitro_2>smooth_min_2)){
       plot_able_IDs <- c(plot_able_IDs,ID_val)
     }
   }
@@ -434,7 +432,7 @@ length(unique(projected_doses_filtered$ID))
 #save heatmaps with concentration plots
 #file_res <- sprintf('Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
 file_res <- sprintf('Violin_Plot_%s_%d_FBS_%d.pdf', gtf$short,length(cellLinesToUse),used_FBS_perc)
-ncol <- length(vplot)
+ncol <- length(cplot)
 nrow <- 1
 pdf(file.path(cwd, figures_dir, 'PK_variability' ,file_res), width= 10 * ncol , height=5 * nrow  )  
 print(grid.arrange(grobs = cplot, ncol=length(cplot)))
@@ -485,7 +483,7 @@ length(unique(projected_doses_filtered$ID))
 #save heatmaps with concentration plots
 #file_res <- sprintf('Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
 file_res <- sprintf('Violin_Plot_Bliss_Excess_%s_%d_FBS_%d.pdf', gtf$short,length(cellLinesToUse),used_FBS_perc)
-ncol <- length(vplot)
+ncol <- length(bplot)
 nrow <- 1
 pdf(file.path(cwd, figures_dir, 'PK_variability' ,file_res), width= 10 * ncol , height=5 * nrow  )  
 print(grid.arrange(grobs = bplot, ncol=length(bplot)))

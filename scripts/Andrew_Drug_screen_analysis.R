@@ -51,7 +51,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(combo$RawTreated, c('DrugName
 
 #decide which metrics to plot
 gtf <- list()
-choise_gtf <- 0
+choise_gtf <- 1
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -260,6 +260,7 @@ for (i in 1:length(clines)){
   #plot matrix
   field <- sprintf('%s', gtf$long)
   dt_smooth <- combo_sub[['SmoothMatrix']]
+  print(dt_smooth)
   groups <- c("normalization_type")
   wide_cols <- c('x')
   dt_smooth <- gDRutils::flatten(dt_smooth, groups = groups, wide_cols = wide_cols)
@@ -286,7 +287,7 @@ ncol <- length(plot_ID)
 nrow <- length(clines)
 #file_res <- sprintf('combo_averaged_bliss_heatmap_%s.pdf', gtf$short)
 file_res <- sprintf('Andrew_combo_averaged_bliss_heatmap_%s.pdf', gtf$short)
-pdf(file.path(cwd, figures_dir, 'Drug_screen' ,file_res), width= 4.5 * ncol, height= 3 * nrow)  
+pdf(file.path(cwd, figures_dir, 'Drug_screen' ,file_res), width= 4.5 * ncol, height= 3.5 * nrow)  
 print(grid.arrange(grobs = p, ncol=ncol))
 dev.off()
 

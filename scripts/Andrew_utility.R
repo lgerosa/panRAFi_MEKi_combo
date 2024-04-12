@@ -7,8 +7,8 @@ library(modules)
 #this function plots heatmaps for combos
 plotHeatMapCombo <- function(QCS_values, value, limits, colors) {
   #factorize concentrations to have equally spaced heatmaps
-  QCS_values$Concentration <- factor(QCS_values$Concentration)
-  QCS_values$Concentration_2 <- factor(QCS_values$Concentration_2)
+  QCS_values$Concentration <- factor(signif(QCS_values$Concentration,2))
+  QCS_values$Concentration_2 <- factor(signif(QCS_values$Concentration_2,2))
   p<- ggplot(QCS_values, aes_string(x = 'Concentration', y = 'Concentration_2', fill = value))+
     geom_tile() +
     labs(title=unique(QCS_values$CellLineName)) +
@@ -18,12 +18,12 @@ plotHeatMapCombo <- function(QCS_values, value, limits, colors) {
     ggpubr::theme_pubr() +
     theme(text = element_text(size=7),
           axis.text = element_text(size = 7),
-          axis.text.x = element_text(angle = 0, hjust = 0.5),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
           plot.title = element_text(hjust = 0.5),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           legend.position = "right"
-    ) 
+    )
   return(p)
 }
 

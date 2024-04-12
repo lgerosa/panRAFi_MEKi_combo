@@ -63,7 +63,7 @@ if (choise_gtf == 0){
 ## DAsses -> dataframe that specifies for which SA or Combo we should asses viability values
 
 #set % FBS in media
-used_FBS_perc = 10
+used_FBS_perc = 5
 
 #load the DDoses definitions and generate unique IDs
 DDoses <- data.frame(read.csv(file.path(cwd, data_dir, 'Dose_projections', 'DDoses.csv')))
@@ -503,6 +503,8 @@ for (i in unique(dt_dd$CellLineName)) {
   
   # Generates bliss heatmaps
   bliss_long <- reshape2::melt(bliss_matrix-combo_matrix)
+  max_val <- max(bliss_long$value,.75)
+  min_val <- min(bliss_long$value,-.5)
   pall_hm[[length(pall_hm)+1]] <- ggplot(bliss_long, aes(x = Var1, y = Var2))+
     geom_tile(aes(fill=value))+xlab(drug_1) +
     geom_text(aes(label = round(value, 2)))+ylab(drug_2) +
@@ -512,7 +514,7 @@ for (i in unique(dt_dd$CellLineName)) {
       mid = "white", 
       high = "firebrick2", 
       midpoint = 0,
-      limits=range(-.5,.6),
+      limits=range(min_val,max_val),
       name = "Bliss Excess"
     )+theme(plot.title = element_text(hjust = 0.5))+ 
     theme(panel.background = element_blank())+ 
@@ -607,8 +609,8 @@ for (i in 1:nrow(dt_dd)){
       } else if (mixmax_fields[j]==2) {
         tope <- max(abs(c(min(na.omit(matv[,..field])), 
                           max(na.omit(matv[,..field])))))
-        mine <- min(c(-0,3,-tope))
-        maxe <- max(c(0.3, tope))
+        mine <- min(c(-0.5,-tope))
+        maxe <- max(c(0.5, tope))
         cdotdose <- 'black'
       }
       limits <- c(mine,maxe)
@@ -708,8 +710,8 @@ for (i in 1:nrow(uclines_drugs)){
       } else if (mixmax_fields[j]==2) {
         tope <- max(abs(c(min(na.omit(matv[,..field])), 
                           max(na.omit(matv[,..field])))))
-        mine <- min(c(-0,3,-tope))
-        maxe <- max(c(0.3, tope))
+        mine <- min(c(-0.5,-tope))
+        maxe <- max(c(0.5, tope))
         cdotdose <- 'black'
       }
       limits <- c(mine,maxe)
@@ -822,8 +824,8 @@ for (i in 1:nrow(uclines_drugs)){
       } else if (mixmax_fields[j]==2) {
         tope <- max(abs(c(min(na.omit(matv[,..field])), 
                           max(na.omit(matv[,..field])))))
-        mine <- min(c(-0,3,-tope))
-        maxe <- max(c(0.3, tope))
+        mine <- min(c(-0.5,-tope))
+        maxe <- max(c(0.5, tope))
         cdotdose <- 'black'
       }
       limits <- c(mine,maxe)

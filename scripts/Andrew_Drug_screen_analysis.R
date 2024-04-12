@@ -180,7 +180,7 @@ for (i in 1:length(aqm)) {
                                main= aqm[i],
                                cluster_rows = FALSE,
                                cluster_cols = FALSE
-  )
+  ) 
   #dev.off()
 }
 
@@ -260,7 +260,6 @@ for (i in 1:length(clines)){
   #plot matrix
   field <- sprintf('%s', gtf$long)
   dt_smooth <- combo_sub[['SmoothMatrix']]
-  print(dt_smooth)
   groups <- c("normalization_type")
   wide_cols <- c('x')
   dt_smooth <- gDRutils::flatten(dt_smooth, groups = groups, wide_cols = wide_cols)
@@ -279,8 +278,9 @@ for (i in 1:length(clines)){
   mine <- min(c(-0.7, min(na.omit(dt_smooth[,..field]))))
   maxe <- max(c(0.7, max(na.omit(dt_smooth[,..field])))) 
   limits <- c(mine,maxe)
-  p[[length(p)+1]] <- plotHeatMapCombo(dt_smooth, field, limits, colors) 
+  p[[length(p)+1]] <- plotHeatMapCombo(dt_smooth, field, limits, colors)
 }
+
 
 #plot figure
 ncol <- length(plot_ID)

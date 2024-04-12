@@ -243,7 +243,7 @@ dev.off()
 
 clines_hl <- c()
 cgroups_ids <- names(CGroups) 
-drug_combos <- unique(select(dt_dd, c('DrugName', 'DrugName_2', 'DD','DD_2','Dose_ID', 'Dose_ID_2')))
+drug_combos <- unique(dplyr::select(dt_dd, c('DrugName', 'DrugName_2', 'DD','DD_2','Dose_ID', 'Dose_ID_2')))
 ord_cols <- c('DrugName', 'DrugName_2', 'DD','DD_2','Dose_ID', 'Dose_ID_2')
 drug_combos <- data.table::setorderv(drug_combos, ord_cols)
 pall_wf <- list() #this is for waterfall plots
@@ -480,18 +480,18 @@ for (i in unique(dt_dd$CellLineName)) {
   bliss_matrix <- reshape2::acast(cell_line_dt_dd, DD ~ DD_2, value.var = 'Bliss')
   
   # formats row and column names
-  DD_convert <- unique(select(cell_line_dt_dd,Dose_ID,DD))
+  DD_convert <- unique(dplyr::select(cell_line_dt_dd,Dose_ID,DD))
   rownames(combo_matrix) <- plyr::mapvalues(rownames(combo_matrix), from=DD_convert$DD, to=DD_convert$Dose_ID)
   rownames(combo_matrix) <- gsub("\\]","",gsub("_"," ",unlist(strsplit(rownames(combo_matrix),"\\["))[c(FALSE, TRUE)]))
-  DD_2_convert <- unique(select(cell_line_dt_dd,Dose_ID_2,DD_2))
+  DD_2_convert <- unique(dplyr::select(cell_line_dt_dd,Dose_ID_2,DD_2))
   colnames(combo_matrix) <- plyr::mapvalues(colnames(combo_matrix), from=DD_2_convert$DD_2, to=DD_2_convert$Dose_ID_2)
   colnames(combo_matrix) <- gsub("\\]","",gsub("_"," ",unlist(strsplit(colnames(combo_matrix),"\\["))[c(FALSE, TRUE)]))
   
   # formats row and column names
-  DD_convert <- unique(select(cell_line_dt_dd,Dose_ID,DD))
+  DD_convert <- unique(dplyr::select(cell_line_dt_dd,Dose_ID,DD))
   rownames(bliss_matrix) <- plyr::mapvalues(rownames(bliss_matrix), from=DD_convert$DD, to=DD_convert$Dose_ID)
   rownames(bliss_matrix) <- gsub("\\]","",gsub("_"," ",unlist(strsplit(rownames(bliss_matrix),"\\["))[c(FALSE, TRUE)]))
-  DD_2_convert <- unique(select(cell_line_dt_dd,Dose_ID_2,DD_2))
+  DD_2_convert <- unique(dplyr::select(cell_line_dt_dd,Dose_ID_2,DD_2))
   colnames(bliss_matrix) <- plyr::mapvalues(colnames(bliss_matrix), from=DD_2_convert$DD_2, to=DD_2_convert$Dose_ID_2)
   colnames(bliss_matrix) <- gsub("\\]","",gsub("_"," ",unlist(strsplit(colnames(bliss_matrix),"\\["))[c(FALSE, TRUE)]))
   

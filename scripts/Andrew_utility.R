@@ -514,7 +514,7 @@ getProjectedPKEffects <- function(smooth_loc,dose_conditions_loc,gtf_loc){
   
   
   
-  unique_conditions <- unique(select(smooth_loc,DrugName,DrugName_2,CellLineName))
+  unique_conditions <- unique(dplyr::select(smooth_loc,DrugName,DrugName_2,CellLineName))
   
   for (i in 1:nrow(unique_conditions)){
     do <- filter(smooth_loc,DrugName == unique_conditions$DrugName[i], DrugName_2 == unique_conditions$DrugName_2[i], CellLineName == unique_conditions$CellLineName[i])

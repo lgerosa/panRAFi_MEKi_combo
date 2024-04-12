@@ -44,14 +44,14 @@ time_plot_range <- c(528,528+96)
 
 # loads belva PK data
 belva_pk <- data.frame(read.csv(file.path(cwd, data_dir, 'PK_variability', 'belva_sim_pk_data_pruned.csv')))
-belva_pk <- select(belva_pk,ID,time,IPRED,TRT01P)
+belva_pk <- dplyr::select(belva_pk,ID,time,IPRED,TRT01P)
 belva_pk <- rename(belva_pk, Dose_ID = TRT01P)
 belva_pk <- filter(belva_pk,time <= max(time_plot_range), time >= min(time_plot_range))
 
 #belva_pk <- filter(belva_pk, time < )
 # loads cobi PK data
 cobi_pk <- data.frame(read.csv(file.path(cwd, data_dir, 'PK_variability', 'cobi_sim_pk_data_pruned.csv')))
-cobi_pk <- select(cobi_pk,ID,time,IPREDnormal,TRT01P)
+cobi_pk <- dplyr::select(cobi_pk,ID,time,IPREDnormal,TRT01P)
 cobi_pk <- rename(cobi_pk, Dose_ID_2 = TRT01P)
 cobi_pk <- filter(cobi_pk,time <= max(time_plot_range), time >= min(time_plot_range))
 
@@ -512,7 +512,7 @@ pkplot <- list()
 for (j in 1:dose_count){
   projected_doses_filtered <- filter(projected_doses,projected_doses$CellLineName==uclines_drugs[i, c('CellLineName')],projected_doses$Dose_ID==belva_Doses_To_Use[j],projected_doses$Dose_ID_2==cobi_Doses_To_Use[j])
   patients_to_map <- patient_ID_to_plot[[toString(j)]]
-  all_dose_values <- log10(select(filter(projected_doses_filtered,projected_doses_filtered$ID %in% patients_to_map),free_Concentration,free_Concentration_2))
+  all_dose_values <- log10(dplyr::select(filter(projected_doses_filtered,projected_doses_filtered$ID %in% patients_to_map),free_Concentration,free_Concentration_2))
   if (j == 1){
   projected_doses_min <- min(all_dose_values,na.rm=TRUE)
   projected_doses_max <- max(all_dose_values,na.rm=TRUE)

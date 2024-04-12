@@ -63,7 +63,7 @@ if (choise_gtf == 0){
 ## DAsses -> dataframe that specifies for which SA or Combo we should asses viability values
 
 #set % FBS in media
-used_FBS_perc = 5
+used_FBS_perc = 10
 
 #load the DDoses definitions and generate unique IDs
 DDoses <- data.frame(read.csv(file.path(cwd, data_dir, 'Dose_projections', 'DDoses.csv')))
@@ -80,10 +80,9 @@ for (drug_ind in 1:length(unique(plot_DDoses$DrugName))){
 strsplit(unique(plot_DDoses$DrugName)[drug_ind],"_")[[1]][2]
 
 
-file_res <- 'DDose.pdf'
+file_res <- 'Andrew_DDose.pdf'
 ncol <- length(unique(DDoses$DrugName))
 pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width=ncol * 4, height= 4)  
-
 print(grid.arrange(grobs = d_temp, ncol=ncol))
 
 dev.off() 
@@ -230,7 +229,7 @@ for (j in 1:length(cgroups_ids)){
 
 #save dose range plot
 #file_res <- sprintf('Dose_range_DA_%s.pdf', gtf$short)
-file_res <- sprintf('Andrew_Dose_range_DA_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Dose_range_DA_%s_FBS_%d.pdf', gtf$short,used_FBS_perc)
 ncol <- length(pall[[cgroups_ids[1]]])
 pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width=ncol * 4, height= 4)  
 for (j in 1:length(cgroups_ids)){
@@ -434,7 +433,7 @@ for (j in 1:length(cgroups_ids)){
 
 #save bar plots
 #file_res <- sprintf('Barplot_DA_%s.pdf', gtf$short)
-file_res <- sprintf('Andrew_Barplot_DA_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Barplot_DA_%s_FBS_%d.pdf', gtf$short,used_FBS_perc)
 ncol <- length(pall_br[[cgroups_ids[1]]])
 pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width=5 * ncol, height=5 )  
 for (j in 1:length(cgroups_ids)){
@@ -446,7 +445,7 @@ dev.off()
 
 #save violin plots
 #file_res <- sprintf('Violin_DA_%s.pdf', gtf$short)
-file_res <- sprintf('Andrew_Violin_DA_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Violin_DA_%s_%d.pdf', gtf$short,used_FBS_perc)
 ncol <- length(pall_vi[[cgroups_ids[1]]])
 pdf(file.path(cwd, figures_dir, 'Dose_projections',file_res), width=3 * ncol, height=5 )  
 for (j in 1:length(cgroups_ids)){
@@ -459,7 +458,7 @@ dev.off()
 
 #save waterfall plots
 #file_res <- sprintf('Waterfall_DA_%s.pdf', gtf$short)
-file_res <- sprintf('Andrew_Waterfall_DA_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Waterfall_DA_%s_%d.pdf', gtf$short,used_FBS_perc)
 ncol <- length(pall_wf[[cgroups_ids[1]]])
 pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width=5 * ncol, height=5 )  
 for (j in 1:length(cgroups_ids)){
@@ -548,7 +547,7 @@ for (i in unique(dt_dd$CellLineName)) {
 
 #save in dose projection heatmaps
 print(p)
-file_res <- sprintf('Andrew_Dose_Projection_Heatmaps_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Dose_Projection_Heatmaps_%s_FBS_%d.pdf', gtf$short,used_FBS_perc)
 nrow <- length(pall_hm) %/% 2
 pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width=6 * 2, height=5*nrow )  
 print(grid.arrange(grobs = pall_hm, ncol=2))
@@ -666,7 +665,7 @@ for (i in 1:nrow(dt_dd)){
 
 #save heatmaps with concentration plots
 #file_res <- sprintf('Heatmaps_DA_%s.pdf', gtf$short)
-file_res <- sprintf('Andrew_Heatmaps_DA_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Heatmaps_DA_%s_FBS_%d.pdf', gtf$short,used_FBS_perc)
 nrow <- length(p_matv)/3
 pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width= 15 , height=5 * nrow  )  
 print(grid.arrange(grobs = p_matv, ncol=3))
@@ -772,7 +771,7 @@ for (i in 1:nrow(uclines_drugs)){
 
 #save heatmaps with concentration plots
 #file_res <- sprintf('Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
-file_res <- sprintf('Andrew_Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Heatmaps_DA_all_doses_in_one_%s_FBS_%d.pdf', gtf$short,used_FBS_perc)
 ncol <- length(assay_ID)
 nrow <- length(p_matv)/ncol
 pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width= 5.5 * ncol , height=5 * nrow  )  
@@ -872,7 +871,7 @@ for (i in 1:nrow(uclines_drugs)){
 
 #save heatmaps with concentration plots
 #file_res <- sprintf('Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
-file_res <- sprintf('Andrew_Heatmaps_Blank_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Heatmaps_Blank_%s_FBS_%d.pdf', gtf$short,used_FBS_perc)
 ncol <- length(assay_ID)
 nrow <- length(p_matv)/ncol
 pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width= 5.5 * ncol , height=5 * nrow  )  

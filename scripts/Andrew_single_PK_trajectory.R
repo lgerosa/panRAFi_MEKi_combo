@@ -43,23 +43,17 @@ smooth <-  merge(smooth, anno , by='CellLineName',  all.x = TRUE)
 time_plot_range <- c(528,528+96) 
 
 # loads belva PK data
-belva_pk <- data.frame(read.csv(file.path(cwd, data_dir, 'PK_variability', 'belva_sim_pk_data.csv')))
-unique(belva_pk$TRT01P)
+belva_pk <- data.frame(read.csv(file.path(cwd, data_dir, 'PK_variability', 'belva_sim_pk_data_pruned.csv')))
 belva_pk <- select(belva_pk,ID,time,IPRED,TRT01P)
 belva_pk <- rename(belva_pk, Dose_ID = TRT01P)
-belva_pk <- filter(belva_pk, time == round(time))
 belva_pk <- filter(belva_pk,time <= max(time_plot_range), time >= min(time_plot_range))
 
 #belva_pk <- filter(belva_pk, time < )
 # loads cobi PK data
-cobi_pk <- data.frame(read.csv(file.path(cwd, data_dir, 'PK_variability', 'cobi_sim_pk_data.csv')))
+cobi_pk <- data.frame(read.csv(file.path(cwd, data_dir, 'PK_variability', 'cobi_sim_pk_data_pruned.csv')))
 cobi_pk <- select(cobi_pk,ID,time,IPREDnormal,TRT01P)
 cobi_pk <- rename(cobi_pk, Dose_ID_2 = TRT01P)
-cobi_pk$time <- cobi_pk$time*24
 cobi_pk <- filter(cobi_pk,time <= max(time_plot_range), time >= min(time_plot_range))
-
-unique(cobi_pk$time)
-unique(belva_pk$time)
 
 # specify which doses to use
 unique(belva_pk$Dose_ID)
@@ -107,8 +101,6 @@ if (choise_gtf == 0){
 # Filters doses for specified conditions
 cobi_pk <- filter(cobi_pk,cobi_pk$Dose_ID_2 %in% cobi_Doses_To_Use)
 belva_pk <- filter(belva_pk,belva_pk$Dose_ID %in% belva_Doses_To_Use)
-
-print(mean(belva_pk$IPRED))
 
 #convert Concentrations to Concentrations_free using FuDrugs
 FuDrugs <- data.frame(read.csv(file.path(cwd, data_dir, 'Dose_projections', 'FuDrugs.csv')))
@@ -177,7 +169,6 @@ belva_pk$free_Concentration <- (belva_pk$IPRED/Belva_MW)*fu_human_Belva # (ng/mL
 cobi_pk$free_Concentration_2 <- (cobi_pk$IPREDnormal/Cobi_MW)*fu_human_Cobi # (ng/mL / g/mol) = 10^-6 mol/L = uMol
 
 
-
 # adds drug names
 belva_pk$DrugName <- "panRAFi_Belvarafenib"
 cobi_pk$DrugName_2 <- "MEKi_Cobimetinib"
@@ -224,8 +215,6 @@ for (i in 1:length(uIDs)){
   }
 }
 projected_doses <- filter(projected_doses,ID %in% vIDs)
-print(length(uIDs))
-print(length(unique(projected_doses$ID)))
 #filter dt_dd
 dt_dd_filt <- projected_doses
 uclines_drugs <- unique(dplyr::select(dt_dd_filt, c('CellLineName', 'DrugName', 'DrugName_2')))
@@ -357,7 +346,6 @@ for (i in 1:nrow(uclines_drugs)){
         #patients_to_map <- c(low_drug_1_ID,high_drug_1_ID,low_drug_2_ID,high_drug_2_ID)
         patients_to_map <- patient_ID_to_plot[[toString(k)]]
         for (patient_ID_ind in 1:length(patients_to_map)){
-          print(patient_ID_ind+(k-1)*length(patients_to_map))
           projected_curve <- filter(projected_doses_filtered,ID == patients_to_map[patient_ID_ind])
           l_matv[[ind_heatmap]] <- l_matv[[ind_heatmap]]+geom_path(data = projected_curve,aes(x=log10(free_Concentration), y=log10(free_Concentration_2)), linewidth = 1,col = patient_colors[patient_ID_ind+(k-1)*length(patients_to_map)])+ggtitle(sprintf("%s\n%s\n%s",uclines_drugs[i, c('CellLineName')],belva_Doses_To_Use[k],cobi_Doses_To_Use[k]))
         }
@@ -539,7 +527,6 @@ for (j in 1:dose_count){
 for (j in 1:dose_count){
   projected_doses_filtered <- filter(projected_doses,projected_doses$CellLineName==uclines_drugs[i, c('CellLineName')],projected_doses$Dose_ID==belva_Doses_To_Use[j],projected_doses$Dose_ID_2==cobi_Doses_To_Use[j])
   patients_to_map <- patient_ID_to_plot[[toString(j)]]
-  print(projected_doses_min)
   for (patient_ID_ind in 1:length(patients_to_map)){
     projected_curve <- filter(projected_doses_filtered,ID == patients_to_map[patient_ID_ind])
     pkplot[[patient_ID_ind+(j-1)*length(patients_to_map)]]  <- ggplot() + geom_path(data = projected_curve,aes(x=time, y=log10(free_Concentration_2)), linewidth = 1,linetype="dashed")+ggtitle(sprintf("Patient ID: %d\n%s\n%s",patients_to_map[patient_ID_ind],belva_Doses_To_Use[j],cobi_Doses_To_Use[j])) + theme(

@@ -54,7 +54,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(smooth, c('DrugName','DrugNam
 
 #decide which metrics to use
 gtf <- list()
-choise_gtf <- 1
+choise_gtf <- 0
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -251,7 +251,7 @@ for (i in 1:nrow(uclines_drugs)){
 
 #save heatmaps with concentration plots
 #file_res <- sprintf('Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
-file_res <- sprintf('Andrew_Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Heatmaps_DA_all_doses_in_one_%s_FBS_%d.pdf', gtf$short,used_FBS_perc)
 ncol <- length(assay_ID)
 nrow <- length(p_matv)/ncol
 pdf(file.path(cwd, figures_dir, 'Invivo_predictions' ,file_res), width= 5.5 * ncol , height=5 * nrow)
@@ -419,14 +419,14 @@ for (i in 1:length(Sim_ID)){
 
 #plot growth rates
 #file_res <- sprintf('Sim_Growth_Rates_DA_%s.pdf', gtf$short)
-file_res <- sprintf('Andrew_Sim_Growth_Rates_DA_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Sim_Growth_Rates_DA_%s_FBS_%d.pdf', gtf$short,used_FBS_perc)
 pdf(file.path(cwd, figures_dir, 'Invivo_predictions' ,file_res), width=10, height=10)  
 print(grid.arrange(grobs = p_bars, ncol=length(cln_sel)))
 dev.off() 
 
 #plot simulations
 #file_res <- sprintf('Sim_Time_Course_DA_%s.pdf', gtf$short)
-file_res <- sprintf('Andrew_Sim_Time_Course_DA_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Sim_Time_Course_DA_%s_FBS_%d.pdf', gtf$short,used_FBS_perc)
 pdf(file.path(cwd, figures_dir, 'Invivo_predictions' ,file_res), width=8, height=10)  
 print(grid.arrange(grobs = p_lines, ncol=length(cln_sel)))
 dev.off() 

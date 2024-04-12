@@ -47,7 +47,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(smooth, c('DrugName','DrugNam
 
 #decide which metrics to use
 gtf <- list()
-choise_gtf <- 1
+choise_gtf <- 0
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -63,7 +63,7 @@ if (choise_gtf == 0){
 ## DAsses -> dataframe that specifies for which SA or Combo we should asses viability values
 
 #set % FBS in media
-used_FBS_perc = 10
+used_FBS_perc = 5
 
 #load the DDoses definitions and generate unique IDs
 DDoses <- data.frame(read.csv(file.path(cwd, data_dir, 'Dose_projections', 'DDoses.csv')))
@@ -503,7 +503,7 @@ for (i in unique(dt_dd$CellLineName)) {
   
   # Generates bliss heatmaps
   bliss_long <- reshape2::melt(bliss_matrix-combo_matrix)
-  max_val <- max(bliss_long$value,.75)
+  max_val <- max(bliss_long$value,.5)
   min_val <- min(bliss_long$value,-.5)
   pall_hm[[length(pall_hm)+1]] <- ggplot(bliss_long, aes(x = Var1, y = Var2))+
     geom_tile(aes(fill=value))+xlab(drug_1) +

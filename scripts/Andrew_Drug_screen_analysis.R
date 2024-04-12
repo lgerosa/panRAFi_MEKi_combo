@@ -155,7 +155,7 @@ for (i in 1:length(aqm)) {
   Combo_heatmap <- as.data.frame(Combo_heatmap)
   # make clids rownames
   rownames(Combo_heatmap)<- Combo_heatmap$CellLineName
-  Combo_heatmap <- select(Combo_heatmap, select = -c('CellLineName') )
+  Combo_heatmap <- dplyr::select(Combo_heatmap, select = -c('CellLineName') )
   # remove cell lines or drugs with all NA
   Combo_heatmap <- Combo_heatmap[, !apply(is.na(Combo_heatmap), 2, all)]
   Combo_heatmap <- Combo_heatmap[!apply(is.na(Combo_heatmap), 1, all), ]
@@ -216,7 +216,7 @@ plot_ID <- c("SmoothMatrix", "BlissExcess")
 
 nplot_ID <- length(plot_ID)
 #select combinations of cell lines and drugs to plot (sort by cell line)
-clines_drugs <- unique(select( combo[['Averaged']], c('CellLineName', 'DrugName', 'DrugName_2')))
+clines_drugs <- unique(dplyr::select( combo[['Averaged']], c('CellLineName', 'DrugName', 'DrugName_2')))
 clines_drugs <- clines_drugs[ clines_drugs$DrugName=='panRAFi_Belvarafenib' &
                               clines_drugs$DrugName_2=='MEKi_Cobimetinib', ]
 

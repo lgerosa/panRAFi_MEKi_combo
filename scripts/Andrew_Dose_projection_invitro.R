@@ -63,7 +63,7 @@ if (choise_gtf == 0){
 ## DAsses -> dataframe that specifies for which SA or Combo we should asses viability values
 
 #set % FBS in media
-used_FBS_perc = 5
+used_FBS_perc = 10
 
 #load the DDoses definitions and generate unique IDs
 DDoses <- data.frame(read.csv(file.path(cwd, data_dir, 'Dose_projections', 'DDoses.csv')))

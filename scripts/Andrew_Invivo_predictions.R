@@ -109,8 +109,30 @@ groups <- c("normalization_type")
 wide_cols <- c('x')
 smooth <- gDRutils::flatten(smooth, groups = groups, wide_cols = wide_cols)
 
+# Converts dose scheme into format with each row corresponding to specific PK condition
+dose_conditions <- flatten_Doses(smooth,DDoses)
+
 # Projects free drug concentrations derived from PK range (min, mean, max) to in-vitro response
-dt_dd <- getProjectedPKEffects(smooth, CGroups, DDoses,gtf)
+projected_doses <- getProjectedPKEffects(smooth,dose_conditions,gtf)
+#dt_dd <- getProjectedPKEffects_dep(smooth, CGroups, DDoses,gtf)
+
+
+# re-formats output from pk projection to give PK min/max/avg different columns
+projected_doses_dd <- projected_doses %>% 
+  filter(PK_subcondition == 'dd') %>%
+  rename(DD = free_Concentration, DD_2 = free_Concentration_2) %>% 
+  dplyr::select(-PK_subcondition)
+projected_doses_dd_min <- projected_doses %>% 
+  filter(PK_subcondition == 'dd_min') %>% 
+  rename(SA_min = SA, SA_min_2 = SA_2, DD_min = free_Concentration, DD_min_2 = free_Concentration_2, Combo_min = Combo,HSA_min = HSA,Bliss_min = Bliss) %>%
+  dplyr::select(-PK_subcondition)
+projected_doses_dd_max <- projected_doses %>%
+  filter(PK_subcondition == 'dd_max') %>%
+  rename(SA_max = SA, SA_max_2 = SA_2, DD_max = free_Concentration, DD_max_2 = free_Concentration_2, Combo_max = Combo,HSA_max = HSA,Bliss_max = Bliss) %>%
+  dplyr::select(-PK_subcondition)
+projected_doses_new <- merge(projected_doses_dd,projected_doses_dd_min)
+dt_dd <- merge(projected_doses_new,projected_doses_dd_max)
+
 
 #### Plot individual cells heatmaps with all the doses in the same plot #####
 

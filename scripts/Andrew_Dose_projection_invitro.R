@@ -47,7 +47,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(smooth, c('DrugName','DrugNam
 
 #decide which metrics to use
 gtf <- list()
-choise_gtf <- 0
+choise_gtf <- 1
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -68,6 +68,28 @@ used_FBS_perc = 5
 #load the DDoses definitions and generate unique IDs
 DDoses <- data.frame(read.csv(file.path(cwd, data_dir, 'Dose_projections', 'DDoses.csv')))
 DDoses$Dose_ID <- sprintf('%s[%s]', DDoses$DrugName, DDoses$title)
+
+plot_DDoses <- DDoses
+plot_DDoses$title <- gsub("_"," ",DDoses$title)
+#plot_DDoses <- arrange(plot_DDoses,plot_DDoses$loc)
+d_temp <- c()
+for (drug_ind in 1:length(unique(plot_DDoses$DrugName))){
+  d_temp[[drug_ind]] <- ggplot(data = filter(plot_DDoses,plot_DDoses$DrugName==unique(plot_DDoses$DrugName)[drug_ind]),aes(y=title,x = dd)) + geom_col() + geom_errorbar(aes(y = title,xmin = dd_min,xmax = dd_max), width = 0.5) + xlab(expression(paste("Plasma Free Drug ", mu, "M"))) + ylab(strsplit(unique(plot_DDoses$DrugName)[drug_ind],"_")[[1]][2])+
+    scale_y_discrete(limits=filter(plot_DDoses,plot_DDoses$DrugName==unique(plot_DDoses$DrugName)[drug_ind])$title)+ theme_classic()
+}
+strsplit(unique(plot_DDoses$DrugName)[drug_ind],"_")[[1]][2]
+
+
+file_res <- 'DDose.pdf'
+ncol <- length(unique(DDoses$DrugName))
+pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width=ncol * 4, height= 4)  
+
+print(grid.arrange(grobs = d_temp, ncol=ncol))
+
+dev.off() 
+
+
+
 
 #create CGroups (cell line groups) list
 CGroups <- list()
@@ -119,8 +141,31 @@ groups <- c("normalization_type")
 wide_cols <- c('x')
 smooth <- gDRutils::flatten(smooth, groups = groups, wide_cols = wide_cols)
 
+
+# Converts dose scheme into format with each row corresponding to specific PK condition
+dose_conditions <- flatten_Doses(smooth,DDoses)
+
 # Projects free drug concentrations derived from PK range (min, mean, max) to in-vitro response
-dt_dd <- getProjectedPKEffects(smooth, CGroups, DDoses,gtf)
+projected_doses <- getProjectedPKEffects(smooth,dose_conditions,gtf)
+#dt_dd <- getProjectedPKEffects_dep(smooth, CGroups, DDoses,gtf)
+
+
+# re-formats output from pk projection to give PK min/max/avg different columns
+projected_doses_dd <- projected_doses %>% 
+  filter(PK_subcondition == 'dd') %>%
+  rename(DD = free_Concentration, DD_2 = free_Concentration_2) %>% 
+  dplyr::select(-PK_subcondition)
+projected_doses_dd_min <- projected_doses %>% 
+  filter(PK_subcondition == 'dd_min') %>% 
+  rename(SA_min = SA, SA_min_2 = SA_2, DD_min = free_Concentration, DD_min_2 = free_Concentration_2, Combo_min = Combo,HSA_min = HSA,Bliss_min = Bliss) %>%
+  dplyr::select(-PK_subcondition)
+projected_doses_dd_max <- projected_doses %>%
+  filter(PK_subcondition == 'dd_max') %>%
+  rename(SA_max = SA, SA_max_2 = SA_2, DD_max = free_Concentration, DD_max_2 = free_Concentration_2, Combo_max = Combo,HSA_max = HSA,Bliss_max = Bliss) %>%
+  dplyr::select(-PK_subcondition)
+projected_doses_new <- merge(projected_doses_dd,projected_doses_dd_min)
+dt_dd <- merge(projected_doses_new,projected_doses_dd_max)
+
 
 ## Plot dose regime for each group (each a  pdf page)
 cgroups_ids <- names(CGroups) 
@@ -468,7 +513,7 @@ for (i in unique(dt_dd$CellLineName)) {
       mid = "white", 
       high = "firebrick2", 
       midpoint = 0,
-      limits=range(-.5,1),
+      limits=range(-.5,.6),
       name = "Bliss Excess"
     )+theme(plot.title = element_text(hjust = 0.5))+ 
     theme(panel.background = element_blank())+ 
@@ -735,3 +780,101 @@ print(grid.arrange(grobs = p_matv, ncol=length(assay_ID)))
 dev.off()
 
 
+
+
+
+
+
+
+#### Plot individual cells heatmaps #####
+
+#filter dt_dd
+dt_dd_filt <- dt_dd
+uclines_drugs <- unique(dplyr::select(dt_dd_filt, c('CellLineName', 'DrugName', 'DrugName_2')))
+rownames(uclines_drugs) <- NULL
+#for each cell line and drug combination
+p_matv <- list()
+#for each cell line and drug combo
+for (i in 1:nrow(uclines_drugs)){
+  #extract Rel.vial or GR, HSA and Bliss from QCS_combo
+  for (j in 1:length(assay_ID)){
+    assay <- assay_ID[j]
+    field <- field_ID[j]
+    matv <- combo[[assay]]
+    idx <- ((matv$CellLineName==uclines_drugs[i, c('CellLineName')]) &
+              (matv$DrugName==uclines_drugs[i, c('DrugName')]) &
+              (matv$DrugName_2==uclines_drugs[i, c('DrugName_2')]))
+    matv <- matv[idx, ]
+    if ('normalization_type' %in% colnames(matv)){
+      groups <- c("normalization_type")
+      wide_cols <- c('x')
+      matv <- gDRutils::flatten(matv, groups = groups, wide_cols = wide_cols)
+    }
+    
+    if (nrow(matv)>1) {
+      #use free concentrations to plot
+      matv$Concentration <- matv$free_Concentration
+      matv$Concentration_2 <- matv$free_Concentration_2
+      matv <- createLogConcentrations(matv)
+      if (mixmax_fields[j]==1) {
+        mine <- min(c(0.0, min(na.omit(matv[,..field]))))
+        maxe <- max(c(1.1, max(na.omit(matv[,..field])))) 
+        cdotdose <- 'black'
+      } else if (mixmax_fields[j]==2) {
+        tope <- max(abs(c(min(na.omit(matv[,..field])), 
+                          max(na.omit(matv[,..field])))))
+        mine <- min(c(-0,3,-tope))
+        maxe <- max(c(0.3, tope))
+        cdotdose <- 'black'
+      }
+      limits <- c(mine,maxe)
+      #calculate width and height of each tile for geom_tile
+      matv$x <- matv$logConcentration
+      matv$y <- matv$logConcentration_2
+      ux <- unique(matv$x)
+      uy <- unique(matv$y)
+      diffux <- diff(ux)/2
+      diffuy <- diff(uy)/2
+      #calculate width left and right (wl, wr) and height up and down (hu, hd)
+      matv$wl=plyr::mapvalues(matv$x, ux, c(diffux[1],diffux))
+      matv$wr=plyr::mapvalues(matv$x, ux, c(diffux,diffux[length(diffux)]))
+      matv$hu=plyr::mapvalues(matv$y, uy, c(diffuy,diffuy[length(diffuy)]))
+      matv$hd=plyr::mapvalues(matv$y, uy, c(diffuy[1],diffuy))
+      #calculate xmin, xmax, ymin, ymax for geom_rect
+      matv$xmin <- (matv$x - matv$wl)
+      matv$xmax <- (matv$x + matv$wr)
+      matv$ymin <- (matv$y - matv$hd)
+      matv$ymax <- (matv$y + matv$hu)
+      colors_matv <- colors_fields[[j]]
+      p_matv[[length(p_matv)+1]] <- ggplot()  +
+        geom_rect(data=matv, 
+                  aes_string(xmin = 'xmin', xmax = 'xmax', 
+                             ymin = 'ymin', ymax = 'ymax', 
+                             fill = field)) +
+        labs(title=sprintf('%s', 
+                           uclines_drugs[i, c('CellLineName')])) +
+        xlab(paste(unique(matv$DrugName),'uM'))+
+        ylab(paste(unique(matv$DrugName_2),'uM')) +
+        scale_fill_gradientn(colours = colors_matv, limits=limits) +
+        ggpubr::theme_pubr() +
+        labs(fill = title_ID[j]) +
+        theme(text = element_text(size=7),
+              axis.text = element_text(size = 7),
+              axis.text.x = element_text(angle = 0, hjust = 0.5),
+              plot.title = element_text(hjust = 0.5),
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              legend.position = "right"
+        )
+    }
+  }
+}
+
+#save heatmaps with concentration plots
+#file_res <- sprintf('Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Heatmaps_Blank_%s.pdf', gtf$short)
+ncol <- length(assay_ID)
+nrow <- length(p_matv)/ncol
+pdf(file.path(cwd, figures_dir, 'Dose_projections' ,file_res), width= 5.5 * ncol , height=5 * nrow  )  
+print(grid.arrange(grobs = p_matv, ncol=length(assay_ID)))
+dev.off()

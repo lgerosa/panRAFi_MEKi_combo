@@ -1,4 +1,4 @@
-DrugNamePlot,type,fu_FBS,min_fu_FBS,max_fu_FBS,FBS_perc
+DrugName,type,fu_FBS,min_fu_FBS,max_fu_FBS,FBS_perc
 panRAFi_Belvarafenib,Cell_culture,0.034,0.034,0.034,10
 panRAFi_Belvarafenib,Cell_culture,0.068,0.068,0.068,5
 MEKi_Cobimetinib,Cell_culture,0.1955,0.1955,0.1955,10

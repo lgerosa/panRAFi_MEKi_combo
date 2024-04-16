@@ -17,11 +17,11 @@ FuDrugs = data.frame(DrugNamePlot = character(),
                      FBS_perc  = numeric()
                      )
 #Belva
-FuDrugs[nrow(FuDrugs)+1,] <- c('panRAFi_Belvarafenib', 'Cell_culture', 0.034, 0.034, 0.034, 10) #measured, Michael Dolton email
-FuDrugs[nrow(FuDrugs)+1,] <- c('panRAFi_Belvarafenib', 'Cell_culture', 0.068, 0.068, 0.068, 5) #assumed, Michael Dolton email
+FuDrugs[nrow(FuDrugs)+1,] <- c('panRAFi_Belvarafenib', 'Cell_culture', 0.034, 0.034, 0.034, 10) #measured
+FuDrugs[nrow(FuDrugs)+1,] <- c('panRAFi_Belvarafenib', 'Cell_culture', 0.068, 0.068, 0.068, 5) #assumed
 #Cobi
-FuDrugs[nrow(FuDrugs)+1,] <- c('MEKi_Cobimetinib', 'Cell_culture',  0.1955,  0.1955, 0.1955, 10) #measured, Michael Dolton email
-FuDrugs[nrow(FuDrugs)+1,] <- c('MEKi_Cobimetinib', 'Cell_culture', 0.3,  0.3, 0.3, 5) #assumed, Michael Dolton email
+FuDrugs[nrow(FuDrugs)+1,] <- c('MEKi_Cobimetinib', 'Cell_culture',  0.1955,  0.1955, 0.1955, 10) #measured
+FuDrugs[nrow(FuDrugs)+1,] <- c('MEKi_Cobimetinib', 'Cell_culture', 0.3,  0.3, 0.3, 5) #measured
 
 #manual conversion to numeric 
 FuDrugs[,  c(3:6)] <- sapply(FuDrugs[, c(3:6)], as.numeric)

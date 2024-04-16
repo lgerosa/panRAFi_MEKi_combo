@@ -62,7 +62,7 @@ if (choise_gtf == 0){
 ## DAsses -> dataframe that specifies for which SA or Combo we should asses viability values
 
 #set % FBS in media
-used_FBS_perc = 5
+used_FBS_perc = 10
 
 #load the DDoses definitions and generate unique IDs
 DDoses <- data.frame(read.csv(file.path(cwd, data_dir, 'Dose_projections', 'DDoses.csv')))
@@ -206,7 +206,7 @@ for (i in 1:nrow(clines_drugs)) {
   #calculate Bliss using gDR
   sa2 <- dt_smooth_sub[dt_smooth_sub[['free_Concentration']] == 0,]
   sa2 <- dplyr::select(sa2, c('free_Concentration', 'free_Concentration_2', gtf$long))
-  colnames(sa2) <- c("free_Concentration",   "free_Concentration_2", "x")
+  colnames(sa2) <- c("free_Concentration",   "free_Concentration_2", "metric1")
   sa1 <- dt_smooth_sub[dt_smooth_sub[['free_Concentration_2']] == 0,]
   sa1 <- dplyr::select(sa1, c('free_Concentration', 'free_Concentration_2', gtf$long))
   colnames(sa1) <- c("free_Concentration",   "free_Concentration_2", "x")

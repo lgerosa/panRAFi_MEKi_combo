@@ -1,0 +1,106 @@
+---
+title: "Import Drug Screen data"
+author: "Luca Gerosa"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1) Load Raw Drug Screen Data
+
+```{r, load_input}
+df_input <- readRDS('./Drug_screen_Belva_Cobi_raw.RDS')
+```
+
+## 2) Set Environment Identifiers in Screen Data for gDR package
+
+```{r, set_env}
+gDRutils::reset_env_identifiers()
+gDRutils::set_env_identifier("duration", "Duration")
+gDRutils::set_env_identifier("concentration", "d1_conc")
+gDRutils::set_env_identifier("concentration2", "d2_conc")
+gDRutils::set_env_identifier("concentration3", "d3_conc")
+gDRutils::set_env_identifier("masked_tag", "masked")
+gDRutils::set_env_identifier("cellline", "CLID")
+gDRutils::set_env_identifier("drug", "d1_id")
+gDRutils::set_env_identifier("drug2", "d2_id")
+gDRutils::set_env_identifier("drug3", "d3_id")
+gDRutils::set_env_identifier("barcode", c("comboId", "compoundId"))
+gDRutils::set_env_identifier("untreated_tag", c("untreated", "vehicle"))
+invisible(NULL)
+```
+
+## 3) Split Data Based on Type (e.g. single-agent or combination)
+
+```{r, split_types}
+df_ <- gDRcore::identify_data_type(df_input)
+df_list <- gDRcore::split_raw_data(df_)
+```
+
+## 4) Extract single-agent and combination Data
+
+```{r, extract_data}
+sa_name <- gDRutils::get_experiment_groups("single-agent")[["single-agent"]]
+combo_name <- gDRutils::get_experiment_groups("combination")
+df_sa <- df_list[[sa_name]]
+df_combo <- df_list[[combo_name]]
+```
+
+## 5) Create SummarizedExperiment Object.
+Additionaly this step matches treatments with controls.
+**Created assays:** RawTreated, Controls
+
+```{r, create_SE}
+se <- gDRcore::create_SE(df_sa, data_type = sa_name)
+se_combo <- gDRcore::create_SE(df_combo, data_type = combo_name)
+```
+
+## 6) Normalize the Data
+**Created assay:** Normalized
+
+```{r normalize_data, warning=FALSE}
+se <- gDRcore::normalize_SE(se, data_type = sa_name)
+se_combo <- gDRcore::normalize_SE(se_combo, data_type = combo_name)
+```
+
+## 7) Average the Data
+**Created assay:** Averaged
+
+```{r, average_data}
+se <- gDRcore::average_SE(se, data_type = sa_name)
+se_combo <- gDRcore::average_SE(se_combo, data_type = combo_name)
+```
+
+## 8) Fit Metrics to the Data
+**Created assay for single-agent data:** Metrics
+**Created assays for combination data:** Metrics, excess, all_iso_points, isobolograms, score
+
+```{r fit_data, warning=FALSE}
+se <- gDRcore::fit_SE(se, data_type = sa_name)
+se_combo <- gDRcore::fit_SE.combinations(se_combo, data_type = combo_name)
+```
+
+## 9) Reset Environment Identifiers
+
+```{r reset_env}
+gDRutils::reset_env_identifiers()
+```
+
+## 10) Create and save MAE Object
+
+```{r create_mae}
+mae <- MultiAssayExperiment::MultiAssayExperiment(experiments = setNames(list(se, se_combo), c(sa_name, combo_name)))
+mae <- gDRutils::standardize_mae(mae)
+saveRDS(mae, './Drug_screen_Belva_Cobi_mae.RDS')
+```
+
+This completes the process of processing drug-dose response data using the gDRcore package.
+
+```{r plot_packages}
+pkg_list <- as.data.frame(installed.packages(), stringsAsFactors = FALSE)
+gDR_packages <- pkg_list[grepl("gDR", pkg_list$Package),]
+print(paste(gDR_packages$Package, gDR_packages$Version, sep = ": "))
+```

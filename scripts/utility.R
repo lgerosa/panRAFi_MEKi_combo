@@ -8,8 +8,8 @@ plotHeatMapCombo <- function(QCS_values, value, limits, colors) {
   p<- ggplot(QCS_values, aes_string(x = 'Concentration', y = 'Concentration_2', fill = value))+
     geom_tile() +
     labs(title=unique(QCS_values$CellLineName)) +
-    xlab(paste(unique(QCS_values$DrugNamePlot),'(uM)'))+
-    ylab(paste(unique(QCS_values$DrugNamePlot_2),'(uM)')) +
+    xlab(paste(unique(QCS_values$DrugName),'(uM)'))+
+    ylab(paste(unique(QCS_values$DrugName_2),'(uM)')) +
     scale_fill_gradientn(colours = colors, limits=limits) +
     ggpubr::theme_pubr() +
     theme(text = element_text(size=7),
@@ -137,14 +137,14 @@ plotComboAgentFit <- function(combo, clines_drugs, gtf, plot_ID) {
     if ( 'RawTreated' %in% plot_ID) {
       #Drug on x axis and Drug_2 as factors
       p[[length(p)+1]] <- ploDoseResponseCombo(dt_rawtreated,
-                                               'DrugNamePlot','DrugNamePlot_2',
+                                               'DrugName','DrugName_2',
                                                'Concentration','Concentration_2',
                                                field, limits)
     }
     if ( 'RawTreated_swapped' %in% plot_ID) {
       #Drug on x axis and Drug_2 as factors
       p[[length(p)+1]] <-  ploDoseResponseCombo(dt_rawtreated,
-                                                'DrugNamePlot_2','DrugNamePlot',
+                                                'DrugName_2','DrugName',
                                                 'Concentration_2','Concentration',
                                                 field, limits) 
     }
@@ -163,14 +163,14 @@ plotComboAgentFit <- function(combo, clines_drugs, gtf, plot_ID) {
     if ('Averaged' %in% plot_ID) {
       #Drug on x axis and Drug_2 as factors
       p[[length(p)+1]] <- ploDoseResponseCombo(dt_averaged,
-                                               'DrugNamePlot','DrugNamePlot_2',
+                                               'DrugName','DrugName_2',
                                                'Concentration','Concentration_2',
                                                field, limits)
     }
     if ( 'Averaged_swapped' %in% plot_ID) {
       #Drug on x axis and Drug_2 as factors
       p[[length(p)+1]] <-  ploDoseResponseCombo(dt_averaged,
-                                                'DrugNamePlot_2','DrugNamePlot',
+                                                'DrugName_2','DrugName',
                                                 'Concentration_2','Concentration',
                                                 field, limits)
     }
@@ -189,14 +189,14 @@ plotComboAgentFit <- function(combo, clines_drugs, gtf, plot_ID) {
     if ( 'SmoothMatrix' %in% plot_ID) {
       #Drug on x axis and Drug_2 as factors
       p[[length(p)+1]] <- ploDoseResponseCombo(dt_smooth, 
-                                               'DrugNamePlot','DrugNamePlot_2',
+                                               'DrugName','DrugName_2',
                                                'Concentration','Concentration_2',
                                                field, limits)
     }
     if ( 'SmoothMatrix_swapped' %in% plot_ID) {
       #Drug on x axis and Drug_2 as factors
       p[[length(p)+1]] <- ploDoseResponseCombo(dt_smooth, 
-                                               'DrugNamePlot_2','DrugNamePlot',
+                                               'DrugName_2','DrugName',
                                                'Concentration_2','Concentration',
                                                field, limits) 
     }
@@ -319,8 +319,8 @@ plotComboAgentFit <- function(combo, clines_drugs, gtf, plot_ID) {
                                ymin = 'ymin', ymax = 'ymax', 
                                fill = field)) +
           labs(title=unique(dt_smooth$CellLineName)) +
-          xlab(paste(unique(dt_smooth$DrugNamePlot),'uM'))+
-          ylab(paste(unique(dt_smooth$DrugNamePlot_2),'uM')) +
+          xlab(paste(unique(dt_smooth$DrugName),'uM'))+
+          ylab(paste(unique(dt_smooth$DrugName_2),'uM')) +
           scale_fill_gradientn(colours = colors_smooth, limits=limits) +
           ggpubr::theme_pubr() +
           theme(text = element_text(size=7),

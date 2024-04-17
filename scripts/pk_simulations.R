@@ -4,8 +4,8 @@ library(xgxr)
 library(here)
 
 
-belva.model <- mread(here("pk_models", "belva_model.cpp"))
-cobi.model <- mread(here("pk_models", "cobi_model.cpp"))
+belva.model <- mread(here('data',"pk_models", "belva_model.cpp"))
+cobi.model <- mread(here('data',"pk_models", "cobi_model.cpp"))
 
 ### Belva Simulations 
 
@@ -57,7 +57,7 @@ df.sim.out %>%
 
 
 ### Cobi Simulations
-=500
+n=500
 
 cohort_1 = as_data_set(ev(ID=1:n, cmt = 1, ii = 1, until = 30, amt = 20)) %>% 
   realize_addl() %>% 

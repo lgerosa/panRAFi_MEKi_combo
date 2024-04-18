@@ -59,7 +59,6 @@ if (choise_gtf == 0){
   gtf$short <- 'GR'
 }
 
-
 #quantity used as quantification of drug effects 
 aqm <- c('%s_gDR_xc50', '%s_gDR_x_max', '%s_gDR_x_mean')
 for (i in 1:length(aqm)){
@@ -78,7 +77,7 @@ for (i in 1:length(aqm)) {
   
   #extract metrics to plot in matrix format
   sa_mat <- data.table::dcast(sa_mut, 
-                                  factor(CellLineName, levels =unique(CellLineName)) ~  factor(DrugNamePlot), 
+                                  factor(CellLineName, levels =unique(CellLineName)) ~  factor(DrugName), 
                                   value.var = aqm[i])
   #order drugs
   sa_mat <- sa_mat[, c('CellLineName', 'MEKi_Cobimetinib', 'panRAFi_Belvarafenib', 'BRAFi_Vemurafenib'), drop=FALSE ]
@@ -145,7 +144,7 @@ for (i in 1:length(aqm)) {
   combo_met <- data.table::setorderv(combo_met, c('BRAF_mut', "NRAS_mut", gtf$long))
    
   #create field with both drugs
-  combo_met$Drugs_combo_name <- paste(combo_met$DrugNamePlot, combo_met$DrugNamePlot_2, sep=' x ')
+  combo_met$Drugs_combo_name <- paste(combo_met$DrugName, combo_met$DrugName_2, sep=' x ')
   #dcast to matrix format the HSA score
   Combo_heatmap <- data.table::dcast(combo_met, 
                                      factor(CellLineName, levels =unique(CellLineName)) ~  factor(Drugs_combo_name), 

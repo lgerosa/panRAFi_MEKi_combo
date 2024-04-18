@@ -155,7 +155,7 @@ for (i in 1:length(aqm)) {
   Combo_heatmap <- as.data.frame(Combo_heatmap)
   # make clids rownames
   rownames(Combo_heatmap)<- Combo_heatmap$CellLineName
-  Combo_heatmap <- select(Combo_heatmap, select = -c('CellLineName') )
+  Combo_heatmap <- dplyr::select(Combo_heatmap, select = -c('CellLineName') )
   # remove cell lines or drugs with all NA
   Combo_heatmap <- Combo_heatmap[, !apply(is.na(Combo_heatmap), 2, all)]
   Combo_heatmap <- Combo_heatmap[!apply(is.na(Combo_heatmap), 1, all), ]
@@ -180,7 +180,7 @@ for (i in 1:length(aqm)) {
                                main= aqm[i],
                                cluster_rows = FALSE,
                                cluster_cols = FALSE
-  )
+  ) 
   #dev.off()
 }
 
@@ -216,7 +216,7 @@ plot_ID <- c("SmoothMatrix", "BlissExcess")
 
 nplot_ID <- length(plot_ID)
 #select combinations of cell lines and drugs to plot (sort by cell line)
-clines_drugs <- unique(select( combo[['Averaged']], c('CellLineName', 'DrugName', 'DrugName_2')))
+clines_drugs <- unique(dplyr::select( combo[['Averaged']], c('CellLineName', 'DrugName', 'DrugName_2')))
 clines_drugs <- clines_drugs[ clines_drugs$DrugName=='panRAFi_Belvarafenib' &
                               clines_drugs$DrugName_2=='MEKi_Cobimetinib', ]
 
@@ -278,15 +278,16 @@ for (i in 1:length(clines)){
   mine <- min(c(-0.7, min(na.omit(dt_smooth[,..field]))))
   maxe <- max(c(0.7, max(na.omit(dt_smooth[,..field])))) 
   limits <- c(mine,maxe)
-  p[[length(p)+1]] <- plotHeatMapCombo(dt_smooth, field, limits, colors) 
+  p[[length(p)+1]] <- plotHeatMapCombo(dt_smooth, field, limits, colors)
 }
+
 
 #plot figure
 ncol <- length(plot_ID)
 nrow <- length(clines)
 #file_res <- sprintf('combo_averaged_bliss_heatmap_%s.pdf', gtf$short)
 file_res <- sprintf('Andrew_combo_averaged_bliss_heatmap_%s.pdf', gtf$short)
-pdf(file.path(cwd, figures_dir, 'Drug_screen' ,file_res), width= 4.5 * ncol, height= 3 * nrow)  
+pdf(file.path(cwd, figures_dir, 'Drug_screen' ,file_res), width= 4.5 * ncol, height= 3.5 * nrow)  
 print(grid.arrange(grobs = p, ncol=ncol))
 dev.off()
 

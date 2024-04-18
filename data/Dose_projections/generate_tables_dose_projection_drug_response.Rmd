@@ -1,0 +1,67 @@
+---
+title: "Generate tables from gDR mae"
+author: "Bartosz Czech, Luca Gerosa"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(SummarizedExperiment)
+library(MultiAssayExperiment)
+```
+
+# 1) Load the MultiAssayExperiment
+
+```{r load_data}
+mae <- readRDS('./Zoomed_in_Belva_Cobi_mae.RDS')
+```
+
+## 2) Extract tables from SummarizedExperiments
+
+```{r, extract_tables}
+sa <- mae[['single-agent']]
+sa_averaged <- gDRutils::convert_se_assay_to_dt(sa, assay_name = "Averaged")
+sa_metrics <- gDRutils::convert_se_assay_to_dt(sa, assay_name = "Metrics")
+groups <- c("normalization_type", "fit_source")
+wide_cols <- gDRutils::get_header("response_metrics")
+sa_metrics <- gDRutils::flatten(sa_metrics, groups = groups, wide_cols = wide_cols)
+
+#replace undefined or inferred IC50 with max concentration used
+gr <- c('RV', 'GR')
+for (i in 1:length(gr)){
+  xc50_str <- sprintf('%s_gDR_xc50', gr[[i]])
+  inf_xc50 <-is.infinite(sa_metrics[[xc50_str]])
+  sa_metrics[inf_xc50, c(xc50_str)] <- 10^sa_metrics[inf_xc50, c('maxlog10Concentration')]
+  over_xc50 <- sa_metrics[[xc50_str]] > 10^sa_metrics$maxlog10Concentration
+  sa_metrics[over_xc50, c(xc50_str)] <- 10^sa_metrics[over_xc50, c('maxlog10Concentration')]
+}
+
+combo <- mae[['combination']]
+combo_list <- list()
+assay_ID <- c('RawTreated', 'Controls', 'Normalized', 'Averaged', 'excess', 'all_iso_points', 'isobolograms', 'scores', 'Metrics')
+for (i in 1:length(assay_ID)){
+  combo_list[[assay_ID[i]]] <- gDRutils::convert_se_assay_to_dt(combo, assay_name = assay_ID[i])
+}
+#recreate the structure with "HSAExcess", "BlissExcess", "HSAScore", "BlissScore" as fields
+combo_list[["HSAExcess"]] <- data.table::setnames(dplyr::select(combo_list$excess, -c('bliss_excess', 'smooth')), "hsa_excess", "excess")
+combo_list[["BlissExcess"]] <- data.table::setnames(dplyr::select(combo_list$excess, -c('hsa_excess', 'smooth')), "bliss_excess", "excess")
+combo_list[["SmoothMatrix"]] <- data.table::setnames(dplyr::select(combo_list$excess, -c('bliss_excess', 'hsa_excess')), "smooth", "x")
+combo_list[["HSAScore"]] <- data.table::setnames(dplyr::select(combo_list$score, -c('bliss_score',  'CIScore_50', 'CIScore_80')), "hsa_score", "x")
+combo_list[["BlissScore"]] <- data.table::setnames(dplyr::select(combo_list$score, -c('hsa_score',  'CIScore_50', 'CIScore_80')), "bliss_score", "x")
+```
+
+## 3) Save tables
+
+```{r, save_tables}
+saveRDS(sa_metrics, './Zoomed_in_Belva_Cobi_sa_metrics.RDS')
+saveRDS(combo_list, './Zoomed_in_Belva_Cobi_combo_metrics.RDS')
+```
+
+This completes the pre-processing of drug-dose response data from MAE/SE to data.tables
+
+```{r, plot_packages}
+pkg_list <- as.data.frame(installed.packages(), stringsAsFactors = FALSE)
+gDR_packages <- pkg_list[grepl("gDR", pkg_list$Package),]
+print(paste(gDR_packages$Package, gDR_packages$Version, sep = ": "))
+```

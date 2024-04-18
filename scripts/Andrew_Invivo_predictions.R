@@ -54,7 +54,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(smooth, c('DrugName','DrugNam
 
 #decide which metrics to use
 gtf <- list()
-choise_gtf <- 1
+choise_gtf <- 0
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -109,8 +109,30 @@ groups <- c("normalization_type")
 wide_cols <- c('x')
 smooth <- gDRutils::flatten(smooth, groups = groups, wide_cols = wide_cols)
 
+# Converts dose scheme into format with each row corresponding to specific PK condition
+dose_conditions <- flatten_Doses(smooth,DDoses)
+
 # Projects free drug concentrations derived from PK range (min, mean, max) to in-vitro response
-dt_dd <- getProjectedPKEffects(smooth, CGroups, DDoses,gtf)
+projected_doses <- getProjectedPKEffects(smooth,dose_conditions,gtf)
+#dt_dd <- getProjectedPKEffects_dep(smooth, CGroups, DDoses,gtf)
+
+
+# re-formats output from pk projection to give PK min/max/avg different columns
+projected_doses_dd <- projected_doses %>% 
+  filter(PK_subcondition == 'dd') %>%
+  rename(DD = free_Concentration, DD_2 = free_Concentration_2) %>% 
+  dplyr::select(-PK_subcondition)
+projected_doses_dd_min <- projected_doses %>% 
+  filter(PK_subcondition == 'dd_min') %>% 
+  rename(SA_min = SA, SA_min_2 = SA_2, DD_min = free_Concentration, DD_min_2 = free_Concentration_2, Combo_min = Combo,HSA_min = HSA,Bliss_min = Bliss) %>%
+  dplyr::select(-PK_subcondition)
+projected_doses_dd_max <- projected_doses %>%
+  filter(PK_subcondition == 'dd_max') %>%
+  rename(SA_max = SA, SA_max_2 = SA_2, DD_max = free_Concentration, DD_max_2 = free_Concentration_2, Combo_max = Combo,HSA_max = HSA,Bliss_max = Bliss) %>%
+  dplyr::select(-PK_subcondition)
+projected_doses_new <- merge(projected_doses_dd,projected_doses_dd_min)
+dt_dd <- merge(projected_doses_new,projected_doses_dd_max)
+
 
 #### Plot individual cells heatmaps with all the doses in the same plot #####
 
@@ -229,7 +251,7 @@ for (i in 1:nrow(uclines_drugs)){
 
 #save heatmaps with concentration plots
 #file_res <- sprintf('Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
-file_res <- sprintf('Andrew_Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Heatmaps_DA_all_doses_in_one_%s_FBS_%d.pdf', gtf$short,used_FBS_perc)
 ncol <- length(assay_ID)
 nrow <- length(p_matv)/ncol
 pdf(file.path(cwd, figures_dir, 'Invivo_predictions' ,file_res), width= 5.5 * ncol , height=5 * nrow)
@@ -397,14 +419,14 @@ for (i in 1:length(Sim_ID)){
 
 #plot growth rates
 #file_res <- sprintf('Sim_Growth_Rates_DA_%s.pdf', gtf$short)
-file_res <- sprintf('Andrew_Sim_Growth_Rates_DA_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Sim_Growth_Rates_DA_%s_FBS_%d.pdf', gtf$short,used_FBS_perc)
 pdf(file.path(cwd, figures_dir, 'Invivo_predictions' ,file_res), width=10, height=10)  
 print(grid.arrange(grobs = p_bars, ncol=length(cln_sel)))
 dev.off() 
 
 #plot simulations
 #file_res <- sprintf('Sim_Time_Course_DA_%s.pdf', gtf$short)
-file_res <- sprintf('Andrew_Sim_Time_Course_DA_%s.pdf', gtf$short)
+file_res <- sprintf('Andrew_Sim_Time_Course_DA_%s_FBS_%d.pdf', gtf$short,used_FBS_perc)
 pdf(file.path(cwd, figures_dir, 'Invivo_predictions' ,file_res), width=8, height=10)  
 print(grid.arrange(grobs = p_lines, ncol=length(cln_sel)))
 dev.off() 

@@ -36,7 +36,7 @@ dda_dir = 'DDA'
 ### load combo data from higher resolution matrixes
 
 #load combo
-#combo <- readRDS(file.path(cwd, data_dir, 'Drug_screen', 'Drug_screen_Belva_Cobi_combo_metrics.RDS'))
+#combo <- readRDS(file.path(cwd, data_dir, 'Drug_screen', 'Drug_screen_Belva_Cobi_combometrics.RDS'))
 combo <- readRDS(file.path(cwd, data_dir, 'Dose_projections', 'Zoomed_in_Belva_Cobi_combo_metrics.RDS'))
 #load smooth matrix
 smooth <- combo$SmoothMatrix

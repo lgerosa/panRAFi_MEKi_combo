@@ -42,47 +42,42 @@ smooth <-  merge(smooth, anno , by='CellLineName',  all.x = TRUE)
 # Full time range
 time_plot_range <- c(528,528+96) 
 
-# loads belva PK data
+# loads belva PK data and filters for desired time range
 belva_pk <- data.frame(read.csv(file.path(cwd, data_dir, 'PK_variability', 'belva_sim_pk_data_pruned.csv')))
 belva_pk <- dplyr::select(belva_pk,ID,time,IPRED,TRT01P)
 belva_pk <- rename(belva_pk, Dose_ID = TRT01P)
 belva_pk <- filter(belva_pk,time <= max(time_plot_range), time >= min(time_plot_range))
 
-#belva_pk <- filter(belva_pk, time < )
-# loads cobi PK data
+
+# loads cobi PK data and filters for desired time range
 cobi_pk <- data.frame(read.csv(file.path(cwd, data_dir, 'PK_variability', 'cobi_sim_pk_data_pruned.csv')))
 cobi_pk <- dplyr::select(cobi_pk,ID,time,IPREDnormal,TRT01P)
 cobi_pk <- rename(cobi_pk, Dose_ID_2 = TRT01P)
 cobi_pk <- filter(cobi_pk,time <= max(time_plot_range), time >= min(time_plot_range))
 
 # specify which doses to use
-unique(belva_pk$Dose_ID)
-unique(cobi_pk$Dose_ID_2)
-belva_Doses_To_Use <- c("Belvarafenib 400mg BID", "Belvarafenib 400mg BID","Belvarafenib 100mg BID","Belvarafenib 100mg BID","Belvarafenib 50mg QD","Belvarafenib 100mg BID")
-cobi_Doses_To_Use <- c("Cobi 20mg QOD",  "Cobi 20mg QD","Cobi 20mg QOD","Cobi 20mg QD", "Cobi 40mg QD","Cobi 40mg QD")
-
-# Finds time for full cycle for each dose combo
-full_cycle_time <- c()
-for (i in 1:length(belva_Doses_To_Use)){
-  full_cycle_time <- c(full_cycle_time,max(get_cycle_length(belva_Doses_To_Use[i]),get_cycle_length(cobi_Doses_To_Use[i])))
-}
-
-dose_count <- length(full_cycle_time)
+belva_Doses_To_Use <- c("Belvarafenib 400mg BID", "Belvarafenib 400mg BID","Belvarafenib 400mg BID","Belvarafenib 400mg BID","Belvarafenib 200mg QD","Belvarafenib 200mg QD","Belvarafenib 200mg QD","Belvarafenib 200mg QD","Belvarafenib 100mg BID","Belvarafenib 100mg BID","Belvarafenib 100mg BID","Belvarafenib 100mg BID","Belvarafenib 50mg QD" ,"Belvarafenib 50mg QD" ,"Belvarafenib 50mg QD" ,"Belvarafenib 50mg QD" )
+cobi_Doses_To_Use <- c("Cobi 60mg QD" ,  "Cobi 40mg QD","Cobi 20mg QD","Cobi 20mg QOD", "Cobi 60mg QD" ,  "Cobi 40mg QD","Cobi 20mg QD","Cobi 20mg QOD","Cobi 60mg QD" ,  "Cobi 40mg QD","Cobi 20mg QD","Cobi 20mg QOD","Cobi 60mg QD" ,  "Cobi 40mg QD","Cobi 20mg QD","Cobi 20mg QOD")
 
 # specify which cell lines to use
 #cellLinesToUse <- c("A-375",     "IPC-298")
 cellLinesToUse <- c("MEL-JUSO",  "SK-MEL-2",  "SK-MEL-30")
 
-
 # specify how many patients to add to violin plots
-violin_patient_count <- 100
+violin_patient_count <- 75
 violin_patients <- 1:violin_patient_count
 
 # specify which patients to plot on heatmaps, 12
-patient_colors <- c("magenta","red","orange","yellow", "black","cyan","grey","brown","purple","maroon","magenta","red","orange","yellow", "black","cyan","grey","brown","purple","maroon","magenta","red","orange","yellow", "black","cyan","grey","brown","purple","maroon","magenta","red","orange","yellow", "black","cyan","grey","brown","purple","maroon","magenta","red","orange","yellow", "black","cyan","grey","brown","purple","maroon","magenta","red","orange","yellow", "black","cyan","grey","brown","purple","maroon")
+patient_colors <- rep(c("darkblue","blue","orange","yellow", "black","cyan","grey","brown","purple","maroon"),length(belva_Doses_To_Use))
 num_patients_to_plot <- 10
 
+# Finds time for full cycle for each dose combo
+full_cycle_time <- c()
+for (i in 1:length(belva_Doses_To_Use)){
+  full_cycle_time <- c(full_cycle_time,max(get_cycle_length(belva_Doses_To_Use[i]),get_cycle_length(cobi_Doses_To_Use[i]),na.rm=TRUE))
+}
 
+dose_count <- length(full_cycle_time)
 
 #set % FBS in media
 used_FBS_perc = 10
@@ -97,10 +92,6 @@ if (choise_gtf == 0){
   gtf$long <- 'GRvalue' 
   gtf$short <- 'GR'
 }
-
-# Filters doses for specified conditions
-cobi_pk <- filter(cobi_pk,cobi_pk$Dose_ID_2 %in% cobi_Doses_To_Use)
-belva_pk <- filter(belva_pk,belva_pk$Dose_ID %in% belva_Doses_To_Use)
 
 #convert Concentrations to Concentrations_free using FuDrugs
 FuDrugs <- data.frame(read.csv(file.path(cwd, data_dir, 'Dose_projections', 'FuDrugs.csv')))
@@ -147,10 +138,6 @@ mixmax_fields <- c(1,2,2) #1 for GR, Rel, 2 for HSA and Bliss, method to calcula
 #add free concentration vectors  
 smooth <- add_free_Concentrations(smooth, FuDrugs)
 
-
-### Prompt dataset information ###
-
-
 #calculate free conc
 fu_human_Cobi <- 0.052
 #Cobi MW: 531.3 g/mol
@@ -166,14 +153,9 @@ Belva_MW <- 478.93
 belva_pk$free_Concentration <- (belva_pk$IPRED/Belva_MW)*fu_human_Belva # (ng/mL / g/mol) = 10^-6 mol/L = uMol
 cobi_pk$free_Concentration_2 <- (cobi_pk$IPREDnormal/Cobi_MW)*fu_human_Cobi # (ng/mL / g/mol) = 10^-6 mol/L = uMol
 
-
 # adds drug names
 belva_pk$DrugName <- "panRAFi_Belvarafenib"
 cobi_pk$DrugName_2 <- "MEKi_Cobimetinib"
-
-# Combines PK data into single dataframe
-dose_response <- merge(belva_pk, cobi_pk, by=c("ID","time"))
-dose_response <- dose_response[order( dose_response$ID, dose_response$time ),]
 
 #flatten
 field <- sprintf('%s_x', gtf$short)
@@ -184,7 +166,23 @@ smooth <- gDRutils::flatten(smooth, groups = groups, wide_cols = wide_cols)
 # grabs cell lines which will be used
 smooth <- filter(smooth,CellLineName %in% cellLinesToUse)
 
+# finds limits of in vitro data
+smooth_min_1 <- min(sort(smooth$free_Concentration)[sort(smooth$free_Concentration)!=0])
+smooth_min_2 <- min(sort(smooth$free_Concentration_2)[sort(smooth$free_Concentration_2)!=0])
+smooth_max_1 <- max(sort(smooth$free_Concentration)[sort(smooth$free_Concentration)!=0])
+smooth_max_2 <- max(sort(smooth$free_Concentration_2)[sort(smooth$free_Concentration_2)!=0])
 
+# Any concentrations above in vitro levels are set to max in vitro level.
+# This wont significantly impact results assuming the in vitro value
+# was able to come sufficiently close to Emax
+belva_pk$free_Concentration <- pmin(belva_pk$free_Concentration,smooth_max_1)
+cobi_pk$free_Concentration_2 <- pmin(cobi_pk$free_Concentration_2,smooth_max_2)
+
+# Combines PK data into single dataframe
+dose_response <- merge(belva_pk, cobi_pk, by=c("ID","time"))
+dose_response <- dose_response[order( dose_response$ID, dose_response$time ),]
+dose_response_filtered <- filter(dose_response,dose_response$Dose_ID_2 %in% cobi_Doses_To_Use & dose_response$Dose_ID %in% belva_Doses_To_Use)
+dose_response_filtered <- dose_response_filtered[order( dose_response_filtered$ID, dose_response_filtered$time ),]
 
 assay_ID <- c("SmoothMatrix", "HSAExcess", "BlissExcess")
 title_ID <- c(gtf$long, "HSA Excess", "Bliss Excess")
@@ -199,39 +197,63 @@ if (gtf$short =='RV'){
 colors_fields[[2]] <- colorRampPalette(c("royalblue3", "royalblue1", "grey95" , "grey95" , "firebrick1", "firebrick3"))(51)
 colors_fields[[3]] <- colorRampPalette(c("royalblue3", "royalblue1", "grey95" , "grey95" , "firebrick1", "firebrick3"))(51)
 
-projected_doses <- getProjectedPKEffects(smooth,dose_response,gtf)
-uIDs <- unique(projected_doses$ID)
 
+projected_doses <- getProjectedPKEffects(smooth,dose_response_filtered,gtf)
+
+
+# This section is used to prune IDs which had dose levels above measured in vitro levels.
+# Currently handled by mapping those dose levels to the max in vitro level
+#uIDs <- unique(projected_doses$ID)
 # IDs without values lying outside of interpolation range
-vIDs <- c()
-for (i in 1:length(uIDs)){
-  t<- filter(projected_doses,ID == uIDs[i])
-  if (sum(is.na(t$Combo)) == 0){
-    vIDs <- c(vIDs,uIDs[i])
+#vIDs <- c()
+#for (i in 1:length(uIDs)){
+#  t<- filter(projected_doses,ID == uIDs[i])
+#  if (sum(is.na(t$Combo)) == 0){
+#    vIDs <- c(vIDs,uIDs[i])
+#  }
+#}
+#projected_doses <- filter(projected_doses,ID %in% vIDs)
+
+
+# generates SA projection dataframe
+single_agents <- unique(c(belva_Doses_To_Use,cobi_Doses_To_Use))
+for (single_agent_ID in single_agents){
+  # finds if single agent is drug or drug_2
+  if(single_agent_ID %in% unique(dose_response$Dose_ID)){
+    single_agent_DR <- filter(dose_response,Dose_ID == single_agent_ID)
+    single_agent_DR$free_Concentration_2 <- 0
+    single_agent_DR$Dose_ID_2 <- "None"
+    projected_doses_SA <- getProjectedPKEffects(smooth,single_agent_DR,gtf)
+  } else if (single_agent_ID %in% unique(dose_response$Dose_ID_2)){
+    single_agent_DR <- filter(dose_response,Dose_ID_2 == single_agent_ID)
+    single_agent_DR$free_Concentration <- 0
+    single_agent_DR$Dose_ID <- "None"
+    projected_doses_SA <- getProjectedPKEffects(smooth,single_agent_DR,gtf)
+  }
+  if (single_agent_ID == single_agents[1]){
+    single_agent_project_df <- projected_doses_SA
+  }else{
+    single_agent_project_df <- rbind(single_agent_project_df,projected_doses_SA)
   }
 }
-projected_doses <- filter(projected_doses,ID %in% vIDs)
-#filter dt_dd
+
+
+## Generates hash object containing which patients to plot for which doses
 dt_dd_filt <- projected_doses
 uclines_drugs <- unique(dplyr::select(dt_dd_filt, c('CellLineName', 'DrugName', 'DrugName_2')))
-
-
-smooth_min_1 <- min(sort(smooth$free_Concentration)[sort(smooth$free_Concentration)!=0])
-smooth_min_2 <- min(sort(smooth$free_Concentration_2)[sort(smooth$free_Concentration_2)!=0])
-#ud2 <- sort(smooth$free_Concentration_2)
-#ud2 <- ud2[ud2!=0]
-#ud2 <- c(min(ud2),max(ud2))
-
 patient_ID_to_plot <- hash()
 for (k in 1:dose_count){
   projected_doses_filtered <- filter(projected_doses,projected_doses$CellLineName==uclines_drugs[1, c('CellLineName')],projected_doses$Dose_ID==belva_Doses_To_Use[k],projected_doses$Dose_ID_2==cobi_Doses_To_Use[k])
   
-  # used to reject values which are too small 
+  # used to reject values which are too big or small to plot
   plot_able_IDs <- c()
   for (ID_val in unique(projected_doses_filtered$ID)){
     min_invitro_1 <- min(filter(projected_doses_filtered,projected_doses_filtered$ID == ID_val)$free_Concentration)
     min_invitro_2 <- min(filter(projected_doses_filtered,projected_doses_filtered$ID == ID_val)$free_Concentration_2)
-    if ((min_invitro_1>smooth_min_1) & (min_invitro_2>smooth_min_2)){
+    
+    max_invitro_1 <- max(filter(projected_doses_filtered,projected_doses_filtered$ID == ID_val)$free_Concentration)
+    max_invitro_2 <- max(filter(projected_doses_filtered,projected_doses_filtered$ID == ID_val)$free_Concentration_2)
+    if ((min_invitro_1>smooth_min_1) & (min_invitro_2>smooth_min_2)&(max_invitro_1<smooth_max_1) & (max_invitro_2<smooth_max_2)){
       plot_able_IDs <- c(plot_able_IDs,ID_val)
     }
   }
@@ -249,10 +271,11 @@ for (k in 1:dose_count){
   summed_z_score <- (drug_1_aucs - mean(drug_1_aucs))/sd(drug_1_aucs) + (drug_2_aucs - mean(drug_2_aucs))/sd(drug_2_aucs)
   patients_to_map <- plot_able_IDs[order(summed_z_score)[round(seq(1, length(summed_z_score), length.out = num_patients_to_plot+2)[2:(num_patients_to_plot+1)])]]
 
-  #patients_to_map <- c(low_drug_1_ID,high_drug_1_ID,low_drug_2_ID,high_drug_2_ID)
-  #patients_to_map <- c(LD1_LD2,HD1_LD2,HD1_HD2,LD1_HD2)
   patient_ID_to_plot[[toString(k)]] <- patients_to_map
   }
+
+
+## Generates projection heatmaps
 
 rownames(uclines_drugs) <- NULL
 #for each cell line and drug combination
@@ -351,41 +374,8 @@ for (i in 1:nrow(uclines_drugs)){
     }
   }
 }
-t_matv
-drug_1_aucs
-match(max(drug_1_aucs[drug_1_aucs<quantile(drug_1_aucs)[2]]),drug_1_aucs)
-match(max(drug_1_aucs[drug_1_aucs<(mean(drug_1_aucs)-var(drug_1_aucs)^.5/1.5) & drug_2_aucs<(mean(drug_2_aucs)-var(drug_2_aucs)^.5/1.5) ]),drug_1_aucs)
-match(max(drug_1_aucs[drug_1_aucs>(mean(drug_1_aucs)+var(drug_1_aucs)^.5/1.5) & drug_2_aucs<(mean(drug_2_aucs)-var(drug_2_aucs)^.5/1.5) ]),drug_1_aucs)
 
-match(min(drug_1_aucs[drug_1_aucs>(mean(drug_1_aucs)+var(drug_1_aucs)^.5/3) & drug_2_aucs>(mean(drug_2_aucs)+var(drug_2_aucs)^.5/3) ]),drug_1_aucs)
-unique(projected_doses_filtered$ID)[match(min(drug_1_aucs[drug_1_aucs>(mean(drug_1_aucs)+var(drug_1_aucs)^.5/3) & drug_2_aucs>(mean(drug_2_aucs)+var(drug_2_aucs)^.5/3) ]),drug_1_aucs)]
-
-
-min(drug_1_aucs[drug_1_aucs>(mean(drug_1_aucs)+var(drug_1_aucs)^.5/3) & drug_2_aucs>(mean(drug_2_aucs)+var(drug_2_aucs)^.5/3) ])
-match(max(drug_1_aucs[drug_1_aucs>(mean(drug_1_aucs)+var(drug_1_aucs)^.5/3) & drug_2_aucs>(mean(drug_2_aucs)+var(drug_2_aucs)^.5/3) ]),drug_1_aucs)
-match(max(drug_1_aucs[drug_1_aucs<(mean(drug_1_aucs)-var(drug_1_aucs)^.5/3) & drug_2_aucs>(mean(drug_2_aucs)+var(drug_2_aucs)^.5/3) ]),drug_1_aucs)
-
-projected_doses_filtered_time <- filter(projected_doses_filtered,time == min(time))
-drug_1_aucs <- c()
-drug_2_aucs <- c()
-for (ID_val in unique(projected_doses_filtered$ID)){
-  single_patient_dose <- mean(filter(projected_doses_filtered,projected_doses_filtered$ID == ID_val)$free_Concentration)
-  single_patient_dose_2 <- mean(filter(projected_doses_filtered,projected_doses_filtered$ID == ID_val)$free_Concentration_2)
-  drug_1_aucs <- c(drug_1_aucs,single_patient_dose)
-  drug_2_aucs <- c(drug_2_aucs,single_patient_dose_2)
-}
-quantile(drug_1_aucs)[2]
-quantile(drug_1_aucs)[4]
-unique(projected_doses_filtered$ID)[match(quantile(drug_1_aucs)[2],drug_1_aucs)]
-unique(projected_doses_filtered$ID)[match(quantile(drug_1_aucs)[4],drug_1_aucs)]
-
-unique(projected_doses_filtered$ID)[match(quantile(drug_2_aucs)[2],drug_2_aucs)]
-unique(projected_doses_filtered$ID)[match(quantile(drug_2_aucs)[4],drug_2_aucs)]
-drug_1_aucs[53]
-projected_doses_filtered_time$free_Concentration_2
-length(unique(projected_doses_filtered$ID))
 #save heatmaps with concentration plots
-#file_res <- sprintf('Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
 file_res <- sprintf('Single_PK_traj_projection_%s_%d_FBS_%d.pdf', gtf$short,length(cellLinesToUse),used_FBS_perc)
 ncol <- dose_count
 nrow <- length(l_matv)/dose_count
@@ -395,43 +385,50 @@ dev.off()
 
 
 
+## Generates dose pair Combo violin plots
 
+# This makes the assumption that the PK trajectories are in steady state
+max_effect <- max(single_agent_project_df$Combo,projected_doses$Combo)
+min_effect <- min(single_agent_project_df$Combo,projected_doses$Combo)
 
-
-
-dt_dd_filt <- projected_doses
-uclines_drugs <- unique(dplyr::select(dt_dd_filt, c('CellLineName', 'DrugName', 'DrugName_2')))
-rownames(uclines_drugs) <- NULL
 #for each cell line and drug combination
 cplot <- list()
-#for each cell line and drug combo
 for (j in 1:dose_count){
-  if (j== 1){
-    max_effect <- max(filter(projected_doses,time > 528, time <= 528+full_cycle_time[j])$Combo)
-    min_effect <- min(filter(projected_doses,time > 528, time <= 528+full_cycle_time[j])$Combo)
-  } else{
-  max_effect <- max(max_effect,filter(projected_doses,time > 528, time <= 528+full_cycle_time[j])$Combo)
-  min_effect <- min(min_effect,filter(projected_doses,time > 528, time <= 528+full_cycle_time[j])$Combo)
-  }
-}
-for (j in 1:dose_count){
-  
   projected_doses_filtered <- filter(projected_doses,projected_doses$Dose_ID==belva_Doses_To_Use[j],projected_doses$Dose_ID_2==cobi_Doses_To_Use[j],time > 528, time <= 528+full_cycle_time[j])
+ 
   patients_to_map <- unique(projected_doses_filtered$ID)[violin_patients]
+  patients_to_map <- na.omit(patients_to_map)
+  print(patients_to_map)
+  print(length(patients_to_map))
   projected_doses_filtered <- filter(projected_doses_filtered,projected_doses_filtered$ID %in% patients_to_map)
-  
-
   cplot[[length(cplot)+1]] <- ggplot(data=projected_doses_filtered, 
                                      aes(x = CellLineName, y = Combo,color = time))+geom_quasirandom()+ggtitle(sprintf("%s\n%s",belva_Doses_To_Use[j],cobi_Doses_To_Use[j])) + ylim(min(min_effect,0),max_effect+.01) 
 }
-#+ scale_color_viridis(discrete = FALSE)
-length(unique(projected_doses_filtered$ID))
 
+## Generates single agent violin plots
+for (single_agent_ID in single_agents){
+  cycle_time <- get_cycle_length(single_agent_ID)
+  if (single_agent_ID %in% single_agent_project_df$Dose_ID){
+    single_agent_project_df_filtered <- filter(single_agent_project_df,Dose_ID==single_agent_ID,Dose_ID_2 == "None",time > 528, time <= 528+cycle_time)
+  } else if (single_agent_ID %in% single_agent_project_df$Dose_ID_2){
+    single_agent_project_df_filtered <- filter(single_agent_project_df,Dose_ID=="None",Dose_ID_2 == single_agent_ID,time > 528, time <= 528+cycle_time)
+  }
+  patients_to_map <- unique(single_agent_project_df_filtered$ID)[violin_patients]
+  patients_to_map <- na.omit(patients_to_map)
+  print(patients_to_map)
+  print(length(patients_to_map))
+  single_agent_project_df_filtered <- filter(single_agent_project_df_filtered,single_agent_project_df_filtered$ID %in% patients_to_map)
+  cplot[[length(cplot)+1]] <- ggplot(data=single_agent_project_df_filtered, 
+                                     aes(x = CellLineName, y = Combo,color = time))+geom_quasirandom()+ggtitle(single_agent_ID) + ylim(min(min_effect,0),max_effect+.01) 
+  print(max(single_agent_project_df_filtered$Combo))
+  print(min(single_agent_project_df_filtered$Combo))
+  print(min(min_effect,0))
+  print(max_effect+.01)
+  print("end")
+}
 
-length(unique(projected_doses_filtered$ID))
-#save heatmaps with concentration plots
-#file_res <- sprintf('Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
-file_res <- sprintf('Violin_Plot_%s_%d_FBS_%d.pdf', gtf$short,length(cellLinesToUse),used_FBS_perc)
+# save GR or RV violin plots 
+file_res <- sprintf('Swarm_Plot_%s_%d_FBS_%d.pdf', gtf$short,length(cellLinesToUse),used_FBS_perc)
 ncol <- length(cplot)
 nrow <- 1
 pdf(file.path(cwd, figures_dir, 'PK_variability' ,file_res), width= 10 * ncol , height=5 * nrow  )  
@@ -439,32 +436,17 @@ print(grid.arrange(grobs = cplot, ncol=length(cplot)))
 dev.off()
 
 
-
-
-
-
-
-
+  
+## Generates dose pair Bliss excess violin plots
+dose_response <- dose_response[order( dose_response$ID, dose_response$time ),]
 projected_doses$BlissExcess <- projected_doses$Bliss - projected_doses$Combo
-
-
-
-
-dt_dd_filt <- projected_doses
-uclines_drugs <- unique(dplyr::select(dt_dd_filt, c('CellLineName', 'DrugName', 'DrugName_2')))
-rownames(uclines_drugs) <- NULL
 #for each cell line and drug combination
 bplot <- list()
 #for each cell line and drug combo
-for (j in 1:dose_count){
-  if (j== 1){
-    max_effect <- max(filter(projected_doses,time > 528, time <= 528+full_cycle_time[j])$BlissExcess)
-    min_effect <- min(filter(projected_doses,time > 528, time <= 528+full_cycle_time[j])$BlissExcess)
-  } else{
-    max_effect <- max(max_effect,filter(projected_doses,time > 528, time <= 528+full_cycle_time[j])$BlissExcess)
-    min_effect <- min(min_effect,filter(projected_doses,time > 528, time <= 528+full_cycle_time[j])$BlissExcess)
-  }
-}
+
+max_effect <- max(projected_doses$BlissExcess)
+min_effect <- min(projected_doses$BlissExcess)
+
 for (j in 1:dose_count){
   
   projected_doses_filtered <- filter(projected_doses,projected_doses$Dose_ID==belva_Doses_To_Use[j],projected_doses$Dose_ID_2==cobi_Doses_To_Use[j],time > 528, time <= 528+full_cycle_time[j])
@@ -473,16 +455,10 @@ for (j in 1:dose_count){
   
   
   bplot[[length(bplot)+1]] <- ggplot(data=projected_doses_filtered, 
-                                     aes(x = CellLineName, y = BlissExcess,color = time))+geom_quasirandom()+ggtitle(sprintf("%s\n%s",belva_Doses_To_Use[j],cobi_Doses_To_Use[j])) + ylim(min(min_effect,0),max_effect+.01) 
+                                     aes(x = CellLineName, y = BlissExcess,color = time))+ggtitle(sprintf("%s\n%s",belva_Doses_To_Use[j],cobi_Doses_To_Use[j])) + ylim(min(min_effect,0),max_effect+.01) + geom_quasirandom() #+geom_violin()+ stat_summary(fun.y=mean, geom="point", size=4, color="black")
 }
-#+ scale_color_viridis(discrete = FALSE)
-length(unique(projected_doses_filtered$ID))
 
-
-length(unique(projected_doses_filtered$ID))
-#save heatmaps with concentration plots
-#file_res <- sprintf('Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
-file_res <- sprintf('Violin_Plot_Bliss_Excess_%s_%d_FBS_%d.pdf', gtf$short,length(cellLinesToUse),used_FBS_perc)
+file_res <- sprintf('Swarm_Plot_Bliss_Excess_%s_%d_FBS_%d.pdf', gtf$short,length(cellLinesToUse),used_FBS_perc)
 ncol <- length(bplot)
 nrow <- 1
 pdf(file.path(cwd, figures_dir, 'PK_variability' ,file_res), width= 10 * ncol , height=5 * nrow  )  
@@ -491,17 +467,7 @@ dev.off()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+## Generate PK trajectories
 dt_dd_filt <- projected_doses
 uclines_drugs <- unique(dplyr::select(dt_dd_filt, c('CellLineName', 'DrugName', 'DrugName_2')))
 rownames(uclines_drugs) <- NULL
@@ -510,7 +476,7 @@ pkplot <- list()
 #for each cell line and drug combo
 
 for (j in 1:dose_count){
-  projected_doses_filtered <- filter(projected_doses,projected_doses$CellLineName==uclines_drugs[i, c('CellLineName')],projected_doses$Dose_ID==belva_Doses_To_Use[j],projected_doses$Dose_ID_2==cobi_Doses_To_Use[j])
+  projected_doses_filtered <- filter(projected_doses,projected_doses$CellLineName==uclines_drugs[1, c('CellLineName')],projected_doses$Dose_ID==belva_Doses_To_Use[j],projected_doses$Dose_ID_2==cobi_Doses_To_Use[j])
   patients_to_map <- patient_ID_to_plot[[toString(j)]]
   all_dose_values <- log10(dplyr::select(filter(projected_doses_filtered,projected_doses_filtered$ID %in% patients_to_map),free_Concentration,free_Concentration_2))
   if (j == 1){
@@ -523,7 +489,7 @@ for (j in 1:dose_count){
 }
 
 for (j in 1:dose_count){
-  projected_doses_filtered <- filter(projected_doses,projected_doses$CellLineName==uclines_drugs[i, c('CellLineName')],projected_doses$Dose_ID==belva_Doses_To_Use[j],projected_doses$Dose_ID_2==cobi_Doses_To_Use[j])
+  projected_doses_filtered <- filter(projected_doses,projected_doses$CellLineName==uclines_drugs[1, c('CellLineName')],projected_doses$Dose_ID==belva_Doses_To_Use[j],projected_doses$Dose_ID_2==cobi_Doses_To_Use[j])
   patients_to_map <- patient_ID_to_plot[[toString(j)]]
   for (patient_ID_ind in 1:length(patients_to_map)){
     projected_curve <- filter(projected_doses_filtered,ID == patients_to_map[patient_ID_ind])
@@ -534,23 +500,16 @@ for (j in 1:dose_count){
                                       colour = "gray85") + theme_classic()
     )
     pkplot[[patient_ID_ind+(j-1)*length(patients_to_map)]]  <- pkplot[[patient_ID_ind+(j-1)*length(patients_to_map)]] + geom_path(data = projected_curve,aes(x=time, y=log10(free_Concentration)), linewidth = 1)+ggtitle(sprintf("Patient ID: %d\n%s\n%s",patients_to_map[patient_ID_ind],belva_Doses_To_Use[j],cobi_Doses_To_Use[j]))+ylim(projected_doses_min,projected_doses_max) + theme_classic()
-  #,col = patient_colors[patient_ID_ind+(j-1)*length(patients_to_map)]
     }
 }
 
-
-length(unique(projected_doses_filtered$ID))
-
-
-length(unique(projected_doses_filtered$ID))
-#save heatmaps with concentration plots
-#file_res <- sprintf('Heatmaps_DA_all_doses_in_one_%s.pdf', gtf$short)
-file_res <- sprintf('PK_trajectories_%d.pdf',length(cellLinesToUse))
+file_res <- 'PK_trajectories.pdf'
 ncol <- 4
 nrow <- length(pkplot)/4
 pdf(file.path(cwd, figures_dir, 'PK_variability' ,file_res), width= 5 * ncol , height=5 * nrow  )  
 print(grid.arrange(grobs = pkplot, ncol=4))
 dev.off()
+
 
 
 

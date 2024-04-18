@@ -47,7 +47,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(smooth, c('DrugName','DrugNam
 
 #decide which metrics to use
 gtf <- list()
-choise_gtf <- 0
+choise_gtf <- 1
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -469,14 +469,14 @@ for (j in 1:length(cgroups_ids)){
 dev.off() 
 
 ## Generate in vivo prediction heatmaps
-
+filter(combo$BlissExcess,CellLineName == uclines_drugs$CellLineName[1],DrugName == uclines_drugs$DrugName[1],DrugName_2 == uclines_drugs$DrugName_2[1],normalization_type == gtf$short)
 pall_hm <- list() # List for Bliss and Combo plots
-for (i in unique(dt_dd$CellLineName)) {
+for (i in 1:nrow(uclines_drugs)){
   cell_line_dt_dd <- dt_dd %>%
-    filter(dt_dd$CellLineName == i)
-  print(cell_line_dt_dd)
+    filter(dt_dd$CellLineName == uclines_drugs$CellLineName[i])
+  
   combo_matrix <- reshape2::acast(cell_line_dt_dd, DD ~ DD_2, value.var = 'Combo')
-  print(rownames(combo_matrix))
+
   bliss_matrix <- reshape2::acast(cell_line_dt_dd, DD ~ DD_2, value.var = 'Bliss')
   
   # formats row and column names
@@ -503,49 +503,74 @@ for (i in unique(dt_dd$CellLineName)) {
   
   # Generates bliss heatmaps
   bliss_long <- reshape2::melt(bliss_matrix-combo_matrix)
-  max_val <- max(bliss_long$value,.5)
-  min_val <- min(bliss_long$value,-.5)
+  
+  bliss_smooth <- filter(combo$BlissExcess,CellLineName == uclines_drugs$CellLineName[i],DrugName == uclines_drugs$DrugName[i],DrugName_2 == uclines_drugs$DrugName_2[i])
+  
+  flatten
+  field <- sprintf('%s_x', gtf$short)
+  groups <- c("normalization_type")
+  wide_cols <- c('x')
+  bliss_smooth <- gDRutils::flatten(bliss_smooth, groups = groups, wide_cols = wide_cols)
+  
+  
+  tope <- max(abs(c(min(bliss_smooth[[gtf$long]],na.rm = TRUE), 
+                          max(bliss_smooth[[gtf$long]],na.rm = TRUE))))
+  max_val <- max(tope,.5)
+  min_val <- min(-tope,-.5)
+  
   pall_hm[[length(pall_hm)+1]] <- ggplot(bliss_long, aes(x = Var1, y = Var2))+
     geom_tile(aes(fill=value))+xlab(drug_1) +
     geom_text(aes(label = round(value, 2)))+ylab(drug_2) +
-    ggtitle(sprintf("%s\nBliss Excess",i)) + 
-    scale_fill_gradient2(
-      low = "royalblue2", 
-      mid = "white", 
-      high = "firebrick2", 
-      midpoint = 0,
-      limits=range(min_val,max_val),
-      name = "Bliss Excess"
+    ggtitle(sprintf("%s\nBliss Excess",uclines_drugs$CellLineName[i])) + 
+    scale_fill_gradientn( colours=c("royalblue3", "royalblue1", "grey95","grey95", "firebrick1", "firebrick3"),
+                          limits=range(min_val,max_val),
+                          name = "Bliss Excess"
     )+theme(plot.title = element_text(hjust = 0.5))+ 
     theme(panel.background = element_blank())+ 
     theme(axis.line = element_line(colour = "black"))
   #scale_fill_viridis(discrete=FALSE,limits=range(-.5,1))
-  
-  if (gtf$short =='RV'){
-    midpoint_val <- 0.5
-    min_val <- 0}
-  else{
-    midpoint_val <- 0
-    min_val <- -0.5
-  }
-  
   # Generates combo heatmaps
   combo_long <- reshape2::melt(combo_matrix)
+  
+  smooth_ph <- filter(smooth,CellLineName == uclines_drugs$CellLineName[i],DrugName == uclines_drugs$DrugName[i],DrugName_2 == uclines_drugs$DrugName_2[i])
+
+  
+  if (gtf$long=='GRvalue'){
+    colors <-  c(rev(rocket(60)[10:60]), viridis(50))
+    max_val <- max(1.1,smooth_ph[[gtf$long]],na.rm = TRUE)
+    min_val <- min(-0.5,smooth_ph[[gtf$long]],na.rm = TRUE) 
+    #max_val <- max(1.1,combo_matrix,na.rm = TRUE)
+    #min_val <- min(-0.5,combo_matrix,na.rm = TRUE) 
+  }else{
+    colors <- viridis(50)
+    max_val <- max(1.1,smooth_ph[[gtf$long]],na.rm = TRUE)
+    min_val <- min(0,smooth_ph[[gtf$long]],na.rm = TRUE) 
+  }
+  limits = range(min_val,max_val)
+  print(limits)
   pall_hm[[length(pall_hm)+1]] <- ggplot(combo_long, aes(x = Var1, y = Var2))+
     geom_tile(aes(fill=value))+xlab(drug_1) +
     geom_text(aes(label = round(value, 2)))+ylab(drug_2) +
-    ggtitle(sprintf("%s\nCombo",i)) + 
-    scale_fill_gradient2(
-      low = "royalblue2", 
-      mid = "white", 
-      high = "firebrick2", 
-      midpoint = midpoint_val,
-      limits=range(min_val,1),
-      name = "Combo"
+    ggtitle(sprintf("%s\nCombo",uclines_drugs$CellLineName[i])) + 
+    scale_fill_gradientn(colours=colors,
+                          limits=limits,
+                          name = "Combo"
     )+theme(plot.title = element_text(hjust = 0.5))+ 
     theme(panel.background = element_blank())+ 
     theme(axis.line = element_line(colour = "black"))
 }
+
+
+#scale_fill_gradient2(
+#  low = "royalblue2", 
+#  mid = "white", 
+#  high = "firebrick2", 
+#  midpoint = midpoint_val,
+#  limits=range(min_val,1),
+#  name = "Combo"
+#)
+
+
 
 #save in dose projection heatmaps
 print(p)
@@ -603,8 +628,13 @@ for (i in 1:nrow(dt_dd)){
       matv$Concentration_2 <- matv$free_Concentration_2
       matv <- createLogConcentrations(matv)
       if (mixmax_fields[j]==1) {
-        mine <- min(c(0.0, min(na.omit(matv[,..field]))))
-        maxe <- max(c(1.1, max(na.omit(matv[,..field])))) 
+        if (gtf$short =='RV'){
+          mine <- min(c(0.0, min(na.omit(matv[,..field]))))
+          maxe <- max(c(1.1, max(na.omit(matv[,..field])))) 
+        }else if (gtf$short =='GR') {
+          mine <- min(c(-0.5, min(na.omit(matv[,..field]))))
+          maxe <- max(c(1.1, max(na.omit(matv[,..field])))) 
+        }
         cdotdose <- 'black'
       } else if (mixmax_fields[j]==2) {
         tope <- max(abs(c(min(na.omit(matv[,..field])), 
@@ -613,7 +643,9 @@ for (i in 1:nrow(dt_dd)){
         maxe <- max(c(0.5, tope))
         cdotdose <- 'black'
       }
+      
       limits <- c(mine,maxe)
+      print(limits)
       #calculate width and height of each tile for geom_tile
       matv$x <- matv$logConcentration
       matv$y <- matv$logConcentration_2
@@ -704,8 +736,13 @@ for (i in 1:nrow(uclines_drugs)){
       matv$Concentration_2 <- matv$free_Concentration_2
       matv <- createLogConcentrations(matv)
       if (mixmax_fields[j]==1) {
-        mine <- min(c(0.0, min(na.omit(matv[,..field]))))
-        maxe <- max(c(1.1, max(na.omit(matv[,..field])))) 
+        if (gtf$short =='RV'){
+          mine <- min(c(0.0, min(na.omit(matv[,..field]))))
+          maxe <- max(c(1.1, max(na.omit(matv[,..field])))) 
+        }else if (gtf$short =='GR') {
+          mine <- min(c(-0.5, min(na.omit(matv[,..field]))))
+          maxe <- max(c(1.1, max(na.omit(matv[,..field])))) 
+        }
         cdotdose <- 'black'
       } else if (mixmax_fields[j]==2) {
         tope <- max(abs(c(min(na.omit(matv[,..field])), 
@@ -818,8 +855,13 @@ for (i in 1:nrow(uclines_drugs)){
       matv$Concentration_2 <- matv$free_Concentration_2
       matv <- createLogConcentrations(matv)
       if (mixmax_fields[j]==1) {
-        mine <- min(c(0.0, min(na.omit(matv[,..field]))))
-        maxe <- max(c(1.1, max(na.omit(matv[,..field])))) 
+        if (gtf$short =='RV'){
+          mine <- min(c(0.0, min(na.omit(matv[,..field]))))
+          maxe <- max(c(1.1, max(na.omit(matv[,..field])))) 
+        }else if (gtf$short =='GR') {
+          mine <- min(c(-0.5, min(na.omit(matv[,..field]))))
+          maxe <- max(c(1.1, max(na.omit(matv[,..field])))) 
+        }
         cdotdose <- 'black'
       } else if (mixmax_fields[j]==2) {
         tope <- max(abs(c(min(na.omit(matv[,..field])), 

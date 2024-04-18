@@ -208,7 +208,7 @@ cell_lines_sel <- unique(combo[['Averaged']]$CellLineName)
 
 #define assays to plot
 #plot_ID <- c("SmoothMatrix", "SmoothMatrix_swapped", "isobolograms", "HSAExcess", "BlissExcess", "isobologramsIC50") 
-plot_ID <- c("SmoothMatrix", "BlissExcess") 
+plot_ID <- c("SmoothMatrix", "BlissExcess")#) 
 
 nplot_ID <- length(plot_ID)
 #select combinations of cell lines and drugs to plot (sort by cell line)

@@ -1,0 +1,118 @@
+---
+title: "Plot tumor volumes from xenograft experiments"
+author: "Luca Gerosa"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(SummarizedExperiment)
+library(MultiAssayExperiment)
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+```
+
+# 1) Load the xenograft experiments
+
+```{r load_data}
+mae <- readRDS('./MAE_Divos_55182.RDS')
+```
+
+## 2) Plot tumor volumes
+
+```{r, plot_data}
+assayPlotName <- 'TUMOR_VOLUME'
+ID <- '55182'
+#extract data
+studyMetaData <- metadata(mae)
+treatments <- studyMetaData$treatments
+groups <- studyMetaData$groups
+studyMasterData <- mae[['StudyMasterData']]
+assaysStudy <- assays(studyMasterData)
+metaDataStudy <- metadata(studyMasterData)
+rowDataStudy <- as.data.frame(rowData(studyMasterData))
+colDataStudy <-  as.data.frame(colData(studyMasterData))
+assayPlot <- assay(studyMasterData,  assayPlotName)
+
+#convert some fields to right type
+rowDataStudy$numTimeValue <- as.numeric(rowDataStudy$timeValue)
+
+
+#melt the assay data
+assayPlotMelt <- as.data.frame(reshape2::melt(assayPlot))
+colnames(assayPlotMelt) <- c('rowid', 'colid', 'numVal')
+assayPlotMelt$colid <- as.character(assayPlotMelt$colid)
+
+#change name of columns because there is a bug in merge later on otherwise..
+rowDataStudy$rowid <- rowDataStudy$id
+colDataStudy$colid <- colDataStudy$id
+
+#annotate with row and column information
+assayPlotMelt <- merge(assayPlotMelt, colDataStudy, by='colid', all.x=TRUE)
+assayPlotMelt <- merge(assayPlotMelt, rowDataStudy, by='rowid', all.x=TRUE)
+#annotate with group information
+groups$groups.id <- groups$id
+groups <- dplyr::select(groups, -c('id'))
+assayPlotMelt <- merge(assayPlotMelt, groups, by='groups.id', all.x=TRUE)
+
+
+### PLOT INDIVIDUAL MOUSE TUMOR VOLUMES AND AGGREGATES
+
+#plot each mouse as individual
+p <- list()
+p[[1]] <- ggplot(data=assayPlotMelt, aes(x=numTimeValue, y=numVal, color=animalCode)) +
+  geom_line() +
+  scale_y_continuous(trans = 'log10') +
+  ggtitle(sprintf('%s: Individual mice', ID)) +
+  xlab('Time (days)') +
+  ylab(assayPlotName) +
+  theme_minimal() #+
+#theme(legend.position="top")
+
+
+#plot each mouse as individual but with group coloring
+p[[2]] <- ggplot(data=assayPlotMelt, aes(x=numTimeValue, y=numVal, text=animalCode , color=groupName)) +
+  geom_line() +
+  scale_y_continuous(trans = 'log10') +
+  ggtitle(sprintf('%s: Individual mice', ID)) +
+  xlab('Time (days)') +
+  ylab(assayPlotName) +
+  theme_minimal() #+ 
+#theme(legend.position="top")
+
+assayPlotMelt$groupIdFactor <- factor(assayPlotMelt$groups.id)
+aggr_meas <- assayPlotMelt %>%
+  group_by(groupName, groups.id, numTimeValue) %>%
+  summarise(mean_numVal = mean(numVal, na.rm=TRUE),
+            sd_numVal = sd(numVal, na.rm=TRUE))
+
+#plot means
+p[[3]] <- ggplot(data=aggr_meas, aes(x=numTimeValue, y=mean_numVal, color=groupName)) +
+  geom_line() +
+  geom_point()+
+  geom_errorbar(aes(ymin=mean_numVal-sd_numVal, ymax=mean_numVal+sd_numVal), 
+                width=.2,  
+                position=position_dodge(0.05)) +
+  scale_y_continuous(trans = 'log10') +
+  ggtitle(sprintf('%s %s: Mice group average', assayPlotMelt$modelName, ID)) +
+  xlab('Time (days)') +
+  ylab(assayPlotName) +
+  theme_minimal() 
+
+#save figures in pdf
+pdffilepath <- file.path('./IPC298_Xenograft_Tumor_Volumes.pdf')
+pdf(pdffilepath, width= 8  , height= 20)
+print(grid.arrange(grobs = p, ncol=1))
+dev.off()
+
+```
+
+Plot packages 
+
+```{r, plot_packages}
+pkg_list <- as.data.frame(installed.packages(), stringsAsFactors = FALSE)
+gDR_packages <- pkg_list[grepl("gDR", pkg_list$Package),]
+print(paste(gDR_packages$Package, gDR_packages$Version, sep = ": "))
+```

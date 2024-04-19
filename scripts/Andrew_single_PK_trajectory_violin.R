@@ -64,6 +64,27 @@ all_dose_combo <- expand.grid(belva_Doses_To_Use, cobi_Doses_To_Use,stringsAsFac
 belva_Doses_To_Use <- all_dose_combo$Var1
 cobi_Doses_To_Use <- all_dose_combo$Var2
 
+
+
+for (belva in belva_Doses_To_Use){
+  print(sprintf("mean pk for '%s' = %f",belva,mean(filter(belva_pk,Dose_ID == belva)$IPRED)))
+}
+# Belva
+# 50mg_QD  AUC 18931 /24
+# 100mg_QD  AUC 41952 /24
+# 200mg_QD AUC 48215 /24
+# 400mg_BID AUC 68914 / 24
+
+for (cobi in cobi_Doses_To_Use){
+  print(sprintf("mean pk for '%s' = %f",cobi,mean(filter(cobi_pk,Dose_ID_2 == cobi)$IPREDnormal)))
+}
+
+# Cobi
+# 20_mg_QD average = AUC 886/24 h
+# 40_mg_QD average = AUC 3840/24 h
+# 60_mg_QD average = AUC 5600/24 h
+
+
 # specify which cell lines to use
 cellLinesToUse <- c("A-375", "IPC-298")
 #cellLinesToUse <- c("MEL-JUSO",  "SK-MEL-2",  "SK-MEL-30")
@@ -104,7 +125,7 @@ used_FBS_perc = 10
 
 #decide which metrics to use
 gtf <- list()
-choise_gtf <- 0
+choise_gtf <- 1
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -292,8 +313,18 @@ for (k in 1:dose_count){
   }
   summed_z_score <- (drug_1_aucs - mean(drug_1_aucs))/sd(drug_1_aucs) + (drug_2_aucs - mean(drug_2_aucs))/sd(drug_2_aucs)
   patients_to_map <- plot_able_IDs[order(summed_z_score)[round(seq(1, length(summed_z_score), length.out = num_patients_to_plot+2)[2:(num_patients_to_plot+1)])]]
-
+  
   patient_ID_to_plot[[toString(k)]] <- patients_to_map
+  if (belva_Doses_To_Use[k] == "Belvarafenib 100mg BID" &  cobi_Doses_To_Use[k] == "Cobi 20mg QD"){
+    print(c("Belvarafenib 100mg BID","Cobi 20mg QD"))
+    print(patients_to_map)
+  } else if (belva_Doses_To_Use[k] == "Belvarafenib 400mg BID" &  cobi_Doses_To_Use[k] == "Cobi 20mg QOD"){
+    print(c("Belvarafenib 400mg BID","Cobi 20mg QOD"))
+    print(patients_to_map)
+  }else if (belva_Doses_To_Use[k] == "Belvarafenib 50mg QD" &  cobi_Doses_To_Use[k] == "Cobi 40mg QD"){
+    print(c("Belvarafenib 50mg QD","Cobi 40mg QD"))
+    print(patients_to_map)
+  }
   }
 
 

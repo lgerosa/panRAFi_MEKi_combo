@@ -39,7 +39,7 @@ smooth <- smooth[smooth$DrugName == 'panRAFi_Belvarafenib' & smooth$DrugName_2 =
 anno <- readRDS(file.path(cwd, data_dir, 'Drug_screen', 'Drug_screen_cell_line_annotations.RDS'))
 #add annotations
 smooth <-  merge(smooth, anno , by='CellLineName',  all.x = TRUE)
-
+#smooth <- filter(smooth,CellLineName == "IPC-298")
 # Full time range
 time_plot_range <- c(528,528+96) 
 
@@ -104,7 +104,7 @@ used_FBS_perc = 10
 
 #decide which metrics to use
 gtf <- list()
-choise_gtf <- 1
+choise_gtf <- 0
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -206,7 +206,9 @@ dose_response_filtered <- dose_response_filtered[order( dose_response_filtered$I
 
 assay_ID <- c("SmoothMatrix", "HSAExcess", "BlissExcess")
 title_ID <- c(gtf$long, "HSA Excess", "Bliss Excess")
-field_ID <- c(gtf$long, gtf$long, gtf$long)
+field_ID <- c(gtf$long, paste(gtf$short,"_excess", sep=""), paste(gtf$short,"_excess", sep=""))
+field_ID
+wide_ID <- c("x","excess","excess")
 colors_fields <- list()
 if (gtf$short =='RV'){
   colors_fields[[1]] <- viridis(51)
@@ -306,36 +308,42 @@ t_matv <- list()
 for (i in 1:nrow(uclines_drugs)){
   #extract Rel.vial or GR, HSA and Bliss from QCS_combo
   for (j in 1:length(assay_ID)){
+    print(j)
     assay <- assay_ID[j]
     field <- field_ID[j]
     matv <- combo[[assay]]
-    field <- gtf$long
-    matv <- combo[[assay]]
+    #field <- gtf$long
+    #matv <- combo[[assay]]
     idx <- ((matv$CellLineName==uclines_drugs[i, c('CellLineName')]) &
               (matv$DrugName==uclines_drugs[i, c('DrugName')]) &
               (matv$DrugName_2==uclines_drugs[i, c('DrugName_2')]))
     matv <- matv[idx, ]
     if ('normalization_type' %in% colnames(matv)){
       groups <- c("normalization_type")
-      wide_cols <- c('x')
+      wide_cols <- c(wide_ID[j])
       matv <- gDRutils::flatten(matv, groups = groups, wide_cols = wide_cols)
     }
-    
+    print('s')
     if (nrow(matv)>1) {
       #use free concentrations to plot
       matv <- add_free_Concentrations(matv, FuDrugs)
+      print('sk')
       matv$Concentration <- matv$free_Concentration
+      print('skk')
       matv$Concentration_2 <- matv$free_Concentration_2
+      print('skkk')
       matv <- createLogConcentrations(matv)
+      print('skkkk')
       if (mixmax_fields[j]==1) {
         if (gtf$short =='RV'){
           mine <- min(c(0.0, min(na.omit(matv[,..field]))))
           maxe <- max(c(1.1, max(na.omit(matv[,..field])))) 
         }else if (gtf$short =='GR') {
+          print('skkkkj')
           mine <- min(c(-0.5, min(na.omit(matv[,..field]))))
           maxe <- max(c(1.1, max(na.omit(matv[,..field])))) 
         }
-        
+        print('k')
         cdotdose <- 'black'
       } else if (mixmax_fields[j]==2) {
         tope <- max(abs(c(min(na.omit(matv[,..field])), 
@@ -345,7 +353,7 @@ for (i in 1:nrow(uclines_drugs)){
         cdotdose <- 'black'
       }
       limits <- c(mine,maxe)
-      
+      print('sd')
       #calculate width and height of each tile for geom_tile
       matv$x <- matv$logConcentration
       matv$y <- matv$logConcentration_2

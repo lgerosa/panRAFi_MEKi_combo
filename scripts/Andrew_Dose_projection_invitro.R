@@ -66,7 +66,7 @@ if (choise_gtf == 0){
 used_FBS_perc = 10
 
 #load the DDoses definitions and generate unique IDs
-DDoses <- data.frame(read.csv(file.path(cwd, data_dir, 'Dose_projections', 'DDoses.csv')))
+DDoses <- data.frame(read.csv(file.path(cwd, data_dir, 'Dose_projections', 'DDoses_avg.csv')))
 DDoses$Dose_ID <- sprintf('%s[%s]', DDoses$DrugName, DDoses$title)
 
 plot_DDoses <- DDoses
@@ -505,16 +505,17 @@ for (i in 1:nrow(uclines_drugs)){
   bliss_long <- reshape2::melt(bliss_matrix-combo_matrix)
   
   bliss_smooth <- filter(combo$BlissExcess,CellLineName == uclines_drugs$CellLineName[i],DrugName == uclines_drugs$DrugName[i],DrugName_2 == uclines_drugs$DrugName_2[i])
-  
+  #print(bliss_smooth)
+  print(i)
   flatten
   field <- sprintf('%s_x', gtf$short)
   groups <- c("normalization_type")
-  wide_cols <- c('x')
+  wide_cols <- c("excess")
   bliss_smooth <- gDRutils::flatten(bliss_smooth, groups = groups, wide_cols = wide_cols)
   
-  
-  tope <- max(abs(c(min(bliss_smooth[[gtf$long]],na.rm = TRUE), 
-                          max(bliss_smooth[[gtf$long]],na.rm = TRUE))))
+  print(bliss_smooth)
+  tope <- max(abs(c(min(bliss_smooth[[paste(gtf$short,"_excess",sep="")]],na.rm = TRUE), 
+                          max(bliss_smooth[[paste(gtf$short,"_excess",sep="")]],na.rm = TRUE))))
   max_val <- max(tope,.5)
   min_val <- min(-tope,-.5)
   
@@ -560,7 +561,6 @@ for (i in 1:nrow(uclines_drugs)){
     theme(axis.line = element_line(colour = "black"))
 }
 
-
 #scale_fill_gradient2(
 #  low = "royalblue2", 
 #  mid = "white", 
@@ -585,7 +585,8 @@ dev.off()
 #go through each cell line and drug combination
 assay_ID <- c("SmoothMatrix", "HSAExcess", "BlissExcess")
 title_ID <- c(gtf$long, "HSA Excess", "Bliss Excess")
-field_ID <- c(gtf$long, gtf$long, gtf$long)
+field_ID <- c(gtf$long, paste(gtf$short,"_excess", sep=""), paste(gtf$short,"_excess", sep=""))
+wide_ID <- c("x","excess","excess")
 colors_fields <- list()
 if (gtf$short =='RV'){
   colors_fields[[1]] <- viridis(51)
@@ -619,7 +620,7 @@ for (i in 1:nrow(dt_dd)){
     matv <- matv[idx, ]
     if ('normalization_type' %in% colnames(matv)){
       groups <- c("normalization_type")
-      wide_cols <- c('x')
+      wide_cols <- c(wide_ID[j])
       matv <- gDRutils::flatten(matv, groups = groups, wide_cols = wide_cols)
     }
     if (nrow(matv)>1) {
@@ -726,7 +727,7 @@ for (i in 1:nrow(uclines_drugs)){
     matv <- matv[idx, ]
     if ('normalization_type' %in% colnames(matv)){
       groups <- c("normalization_type")
-      wide_cols <- c('x')
+      wide_cols <- c(wide_ID[j])
       matv <- gDRutils::flatten(matv, groups = groups, wide_cols = wide_cols)
     }
     
@@ -845,7 +846,7 @@ for (i in 1:nrow(uclines_drugs)){
     matv <- matv[idx, ]
     if ('normalization_type' %in% colnames(matv)){
       groups <- c("normalization_type")
-      wide_cols <- c('x')
+      wide_cols <- c(wide_ID[j])
       matv <- gDRutils::flatten(matv, groups = groups, wide_cols = wide_cols)
     }
     

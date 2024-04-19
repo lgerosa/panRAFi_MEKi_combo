@@ -37,7 +37,7 @@ data_imported <- data_imported[idx,]
 idx <- data_imported$CellLineName == "IPC-298"
 data_imported[idx, c('ReferenceDivisionTime')] <- 60
 #change the doubling rate of A375 to the one measured by Fran with incucyte
-idx <- data_imported$CellLineName == "A375"
+idx <- data_imported$CellLineName == "A-375"
 data_imported[idx, c('ReferenceDivisionTime')] <- 45
 
 #change names for drugs

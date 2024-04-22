@@ -54,7 +54,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(smooth, c('DrugName','DrugNam
 
 #decide which metrics to use
 gtf <- list()
-choise_gtf <- 0
+choise_gtf <- 1
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -139,7 +139,8 @@ dt_dd <- merge(projected_doses_new,projected_doses_dd_max)
 #go through each cell line and drug combination
 assay_ID <- c("SmoothMatrix", "HSAExcess", "BlissExcess")
 title_ID <- c(gtf$long, "HSA Excess", "Bliss Excess")
-field_ID <- c(gtf$long, gtf$long, gtf$long)
+field_ID <- c(gtf$long, paste(gtf$short,"_excess", sep=""), paste(gtf$short,"_excess", sep=""))
+wide_ID <- c("x","excess","excess")
 colors_fields <- list()
 if (gtf$short =='RV'){
   colors_fields[[1]] <- viridis(51)
@@ -171,7 +172,7 @@ for (i in 1:nrow(uclines_drugs)){
     matv <- matv[idx, ]
     if ('normalization_type' %in% colnames(matv)){
       groups <- c("normalization_type")
-      wide_cols <- c('x')
+      wide_cols <- c(wide_ID[j])
       matv <- gDRutils::flatten(matv, groups = groups, wide_cols = wide_cols)
     }
     
@@ -188,7 +189,7 @@ for (i in 1:nrow(uclines_drugs)){
       } else if (mixmax_fields[j]==2) {
         tope <- max(abs(c(min(na.omit(matv[,..field])), 
                           max(na.omit(matv[,..field])))))
-        mine <- min(c(-0,3,-tope))
+        mine <- min(c(-0.3,-tope))
         maxe <- max(c(0.3, tope))
         cdotdose <- 'black'
       }

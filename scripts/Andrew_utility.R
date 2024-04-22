@@ -620,12 +620,16 @@ flatten_Doses <- function(smooth_loc,DDoses_loc){
 }
 
 get_cycle_length <- function(Dose_name){
+  if (grepl(" ",Dose_name, fixed = TRUE)){
   result = switch(   
     strsplit(Dose_name," ")[[1]][3],   
     "BID"= 12,   
     "QD"= 24,
     "QOD"= 48
   ) 
-  return(result)
+  return(result)} else{
+    return(NaN)
+  }
 }
+
 

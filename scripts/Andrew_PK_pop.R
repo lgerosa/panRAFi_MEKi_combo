@@ -153,22 +153,29 @@ doses <- c(belva_Doses_To_Use,cobi_Doses_To_Use)
 DDoses <- data.frame(DrugName = character(), dd = double(), dd_min = double(), dd_max = double(), title = character(),Dose_ID = character())
 for (i in 1:length(belva_Doses_To_Use)){
   belva_pk_filtered <- filter(belva_pk,Dose_ID == belva_Doses_To_Use[i])
-  print(length(belva_pk_filtered$ID))
-  print(length(unique(belva_pk_filtered$ID)))
   dose_mean <- mean(belva_pk_filtered$free_Concentration)
+  low_q <- quantile(belva_pk_filtered$free_Concentration)
   dose_sd <- sd(belva_pk_filtered$free_Concentration)
+  #patient_means <- c()
+  #for (ID_val in unique(belva_pk_filtered$ID)){
+  # print(ID)
+  #  single_patient_belva_pk_filtered <- filter(belva_pk_filtered,belva_pk_filtered$ID==ID_val)
+  #  patient_means <- c(patient_means,mean(single_patient_belva_pk_filtered$free_Concentration))
+  #}
+  #print(patient_means)
   title_part <- strsplit(belva_Doses_To_Use[i]," ")
   title <- paste(title_part[[1]][2],"_",title_part[[1]][3],sep="")
   DrugName <- belva_pk_filtered$DrugName[1]
   Dose_ID <- paste(DrugName,"[",title,"]",sep = "")
   DDoses[i,] = c(DrugName,dose_mean,dose_mean-dose_sd,dose_mean+dose_sd,title,Dose_ID)
+  #print(DDoses[i,])
+  #DDoses[i,] = c(DrugName,low_q[[3]],low_q[[2]],low_q[[4]],title,Dose_ID)
+  #print(DDoses[i,])
 } 
 DDoses
 for (i in 1:length(cobi_Doses_To_Use)){
   
   cobi_pk_filtered <- filter(cobi_pk,Dose_ID_2 == cobi_Doses_To_Use[i])
-  print(length(cobi_pk_filtered$ID))
-  print(length(unique(cobi_pk_filtered$ID)))
   dose_mean <- mean(cobi_pk_filtered$free_Concentration)
   dose_sd <- sd(cobi_pk_filtered$free_Concentration)
   title_part <- strsplit(cobi_Doses_To_Use[i]," ")

@@ -5,7 +5,6 @@
 #1. Plot SA response metrics (IC50, AUC, Emax)
 #2. Plot drug combo response metrics (HSA, Bliss)
 #3. Plot individual cell line heatmaps 
-
 library(ggplot2)
 library(gridExtra)
 library(dplyr)
@@ -13,7 +12,8 @@ library(viridis)
 library(gDRutils)
 
 #set working directory
-cwd <- "/gstore/home/gerosal/projects/work/panRAFi_MEKi_combo"
+#cwd <- "/gstore/home/gerosal/projects/work/panRAFi_MEKi_combo"
+cwd <- "/Users/andrewgoetz/Documents/Luca_Projects/panRAFi_MEKi_combo"
 setwd(cwd)
 
 #load utility functions
@@ -59,6 +59,7 @@ if (choise_gtf == 0){
   gtf$short <- 'GR'
 }
 
+
 #quantity used as quantification of drug effects 
 aqm <- c('%s_gDR_xc50', '%s_gDR_x_max', '%s_gDR_x_mean')
 for (i in 1:length(aqm)){
@@ -70,11 +71,11 @@ aqmlab <-c('IC50_uM', 'E_max', 'AUC')
 qmfunc <- c(log10, identity, identity)
 p <- list()
 for (i in 1:length(aqm)) {
-  
+  print("test")
   #order according to mutations 
   sa_mut <- merge(sa, anno , by='CellLineName')
   sa_mut <- data.table::setorderv(sa_mut, c('BRAF_mut', "NRAS_mut",  aqm[i]))
-  
+  print("test")
   #extract metrics to plot in matrix format
   sa_mat <- data.table::dcast(sa_mut, 
                                   factor(CellLineName, levels =unique(CellLineName)) ~  factor(DrugName), 
@@ -113,6 +114,7 @@ for (i in 1:length(aqm)) {
 }  
 
 #save heatmaps
+#file_res <- sprintf('sa_metrics_heatmaps_%s.pdf', gtf$short)
 file_res <- sprintf('sa_metrics_heatmaps_%s.pdf', gtf$short)
 pdf(file.path(cwd, figures_dir, 'Drug_screen' ,file_res), width=10, height= 2)  
 for (i in 1:length(p)){
@@ -144,21 +146,21 @@ for (i in 1:length(aqm)) {
   combo_met <- data.table::setorderv(combo_met, c('BRAF_mut', "NRAS_mut", gtf$long))
    
   #create field with both drugs
-  combo_met$Drugs_combo_name <- paste(combo_met$DrugName, combo_met$DrugName_2, sep=' x ')
+  combo_met$Drugs_combo_name <- paste(combo_met$DrugNamePlot, combo_met$DrugNamePlot_2, sep=' x ')
   #dcast to matrix format the HSA score
   Combo_heatmap <- data.table::dcast(combo_met, 
-                                     factor(CellLineName, levels =unique(CellLineName)) ~  factor(Drugs_combo_name), 
+                                     factor(CellLineName, levels =unique(CellLineName)) ~  factor(DrugName), 
                                      value.var = gtf$long)
   Combo_heatmap <- as.data.frame(Combo_heatmap)
   # make clids rownames
   rownames(Combo_heatmap)<- Combo_heatmap$CellLineName
-  Combo_heatmap <- select(Combo_heatmap, select = -c('CellLineName') )
+  Combo_heatmap <- dplyr::select(Combo_heatmap, select = -c('CellLineName') )
   # remove cell lines or drugs with all NA
   Combo_heatmap <- Combo_heatmap[, !apply(is.na(Combo_heatmap), 2, all)]
   Combo_heatmap <- Combo_heatmap[!apply(is.na(Combo_heatmap), 1, all), ]
   
   #define colors and breaks
-  breaks <- seq(from=-0.7, to=0.7, length.out=50)
+  breaks <- seq(from=-0.5, to=0.5, length.out=50)
   hmcol <- rev(colorRampPalette(c("royalblue2", "royalblue1", "grey95" , "grey95" , "firebrick1", "firebrick2"))(51))
   
   #transpose
@@ -177,11 +179,12 @@ for (i in 1:length(aqm)) {
                                main= aqm[i],
                                cluster_rows = FALSE,
                                cluster_cols = FALSE
-  )
+  ) 
   #dev.off()
 }
 
 #save heatmaps
+#file_res <- sprintf('combo_metrics_heatmap_%s.pdf', gtf$short)
 file_res <- sprintf('combo_metrics_heatmap_%s.pdf', gtf$short)
 pdf(file.path(cwd, figures_dir, 'Drug_screen' ,file_res), width=25, height= 3.5)  
 for (i in 1:length(p)){
@@ -212,7 +215,7 @@ plot_ID <- c("SmoothMatrix", "BlissExcess")
 
 nplot_ID <- length(plot_ID)
 #select combinations of cell lines and drugs to plot (sort by cell line)
-clines_drugs <- unique(select( combo[['Averaged']], c('CellLineName', 'DrugName', 'DrugName_2')))
+clines_drugs <- unique(dplyr::select( combo[['Averaged']], c('CellLineName', 'DrugName', 'DrugName_2')))
 clines_drugs <- clines_drugs[ clines_drugs$DrugName=='panRAFi_Belvarafenib' &
                               clines_drugs$DrugName_2=='MEKi_Cobimetinib', ]
 
@@ -271,17 +274,18 @@ for (i in 1:length(clines)){
   wide_cols <- c('excess')
   dt_smooth <- gDRutils::flatten(dt_smooth, groups = groups, wide_cols = wide_cols)
   colors <- colorRampPalette(c("royalblue3", "royalblue1", "grey95" , "grey95" , "firebrick1", "firebrick3"))(51)
-  mine <- min(c(-0.7, min(na.omit(dt_smooth[,..field]))))
-  maxe <- max(c(0.7, max(na.omit(dt_smooth[,..field])))) 
+  mine <- min(c(-0.5, min(na.omit(dt_smooth[,..field]))))
+  maxe <- max(c(0.5, max(na.omit(dt_smooth[,..field])))) 
   limits <- c(mine,maxe)
-  p[[length(p)+1]] <- plotHeatMapCombo(dt_smooth, field, limits, colors) 
+  p[[length(p)+1]] <- plotHeatMapCombo(dt_smooth, field, limits, colors)
 }
+
 
 #plot figure
 ncol <- length(plot_ID)
 nrow <- length(clines)
 file_res <- sprintf('combo_averaged_bliss_heatmap_%s.pdf', gtf$short)
-pdf(file.path(cwd, figures_dir, 'Drug_screen' ,file_res), width= 4.5 * ncol, height= 3 * nrow)  
+pdf(file.path(cwd, figures_dir, 'Drug_screen' ,file_res), width= 4.5 * ncol, height= 3.5 * nrow)  
 print(grid.arrange(grobs = p, ncol=ncol))
 dev.off()
 

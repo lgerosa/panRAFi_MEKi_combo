@@ -47,7 +47,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(smooth, c('DrugName','DrugNam
 
 #decide which metrics to use
 gtf <- list()
-choise_gtf <- 1
+choise_gtf <- 0
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -468,8 +468,10 @@ for (j in 1:length(cgroups_ids)){
 }  
 dev.off() 
 
+uclines_drugs <- unique(dplyr::select(dt_dd, c('CellLineName', 'DrugName', 'DrugName_2')))
+rownames(uclines_drugs) <- NULL
 ## Generate in vivo prediction heatmaps
-filter(combo$BlissExcess,CellLineName == uclines_drugs$CellLineName[1],DrugName == uclines_drugs$DrugName[1],DrugName_2 == uclines_drugs$DrugName_2[1],normalization_type == gtf$short)
+#filter(combo$BlissExcess,CellLineName == uclines_drugs$CellLineName[1],DrugName == uclines_drugs$DrugName[1],DrugName_2 == uclines_drugs$DrugName_2[1],normalization_type == gtf$short)
 pall_hm <- list() # List for Bliss and Combo plots
 for (i in 1:nrow(uclines_drugs)){
   cell_line_dt_dd <- dt_dd %>%
@@ -825,7 +827,7 @@ dev.off()
 
 #filter dt_dd
 dt_dd_filt <- dt_dd
-uclines_drugs <- unique(dplyr::select(dt_dd_filt, c('CellLineName', 'DrugName', 'DrugName_2')))
+uclines_drugs <- unique(dplyr::select(dt_dd, c('CellLineName', 'DrugName', 'DrugName_2')))
 rownames(uclines_drugs) <- NULL
 #for each cell line and drug combination
 p_matv <- list()

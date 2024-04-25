@@ -50,7 +50,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(combo$RawTreated, c('DrugName
 
 #decide which metrics to plot
 gtf <- list()
-choise_gtf <- 0
+choise_gtf <- 1
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -289,3 +289,13 @@ pdf(file.path(cwd, figures_dir, 'Drug_screen' ,file_res), width= 4.5 * ncol, hei
 print(grid.arrange(grobs = p, ncol=ncol))
 dev.off()
 
+print(combo)
+plot_typess <- c("isobologramsIC50","BlissExcess")
+test<-plotComboAgentFit(combo, clines_drugs, gtf, plot_typess) 
+ncol <- length(plot_typess)
+nrow <- length(test)%/%ncol
+print(nrow)
+file_res <- sprintf('IC50_heatmap_%s.pdf', gtf$short)
+pdf(file.path(cwd, figures_dir, 'Drug_screen' ,file_res), width= 4.5 * ncol, height= 3.5 * nrow)  
+print(grid.arrange(grobs = test, ncol=ncol))
+dev.off()

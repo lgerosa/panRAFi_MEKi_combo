@@ -8,7 +8,7 @@ The following list contains links to the scripts used to generate figures found 
   *  1a-1c [[script - Drug_screen_analysis.R](scripts/Drug_screen_analysis.R)]
   *  1a [[figure - sa_metrics_heatmaps_RV.pdf](figures/Drug_screen/sa_metrics_heatmaps_RV.pdf)]
   *  1b [[figure - combo_metrics_heatmap_RV.pdf](figures/Drug_screen/combo_metrics_heatmap_RV.pdf)]
-  *  1c [[figure - combo_averaged_bliss_heatmap_RV.pdf](figures/Drug_screen/combo_averaged_bliss_heatmap_RV.pdf)]
+  *  1c [[figure - IC50_heatmap_RV.pdf](figures/Drug_screen/IC50_heatmap_RV.pdf)]
 * Figure 2
   * 2e [[script - WB_dose_response.ipynb](scripts/model_simulation_and_plotting/WB_dose_response/WB_dose_response.ipynb)]
   * 2e [[figure - BRAF_V600E.svg](figures/Model_predicted_ss_dose_response_plots/BRAF_V600E.svg), [figure - NRAS_Q61_w_CRAF_Feedback.svg](figures/Model_predicted_ss_dose_response_plots/NRAS_Q61_w_CRAF_Feedback.svg)]

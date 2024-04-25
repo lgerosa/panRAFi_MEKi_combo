@@ -12,8 +12,8 @@ plotHeatMapCombo <- function(QCS_values, value, limits, colors) {
   p<- ggplot(QCS_values, aes_string(x = 'Concentration', y = 'Concentration_2', fill = value))+
     geom_tile() +
     labs(title=unique(QCS_values$CellLineName)) +
-    xlab(paste(unique(QCS_values$DrugNamePlot),'(uM)'))+
-    ylab(paste(unique(QCS_values$DrugNamePlot_2),'(uM)')) +
+    xlab(paste(unique(QCS_values$DrugName),'(uM)'))+
+    ylab(paste(unique(QCS_values$DrugName_2),'(uM)')) +
     scale_fill_gradientn(colours = colors, limits=limits) +
     ggpubr::theme_pubr() +
     theme(text = element_text(size=7),
@@ -82,7 +82,6 @@ createLogConcentrations <- function(QCS_values){
 
 
 plotComboAgentFit <- function(combo, clines_drugs, gtf, plot_ID) {
-  
   #define allowd plots
   plot_ID_allowed <-c("RawTreated", 
                       "Normalized", 
@@ -114,9 +113,9 @@ plotComboAgentFit <- function(combo, clines_drugs, gtf, plot_ID) {
                 'BlissScore') 
   
   #extract cell lines and drugs to plot
-  clines <- clines_drugs$clines
-  drug <- clines_drugs$Gnumber
-  drug_2 <- clines_drugs$Gnumber_2
+  clines <- clines_drugs$CellLineName
+  drug <- clines_drugs$DrugName
+  drug_2 <- clines_drugs$DrugName_2
   #vector of ggplots
   p <- list()
   #for each cell line and drug combo combination
@@ -126,12 +125,11 @@ plotComboAgentFit <- function(combo, clines_drugs, gtf, plot_ID) {
     combo_sub <- list()
     for (j in 1:length(assay_ID)){
       aID <- assay_ID[[j]]
-      idx <- (combo[[aID]]$clines==clines[i]) &
-        (combo[[aID]]$Gnumber==drug[i]) &
-        (combo[[aID]]$Gnumber_2==drug_2[i])
+      idx <- (combo[[aID]]$CellLineName==clines[i]) &
+        (combo[[aID]]$DrugName==drug[i]) &
+        (combo[[aID]]$DrugName_2==drug_2[i])
       combo_sub[[aID]] <- combo[[aID]][idx]
     }  
-    
     #plot dose response raw treated (swapping the two drugs if needed)
     field <- 'ReadoutValue'
     dt_rawtreated <- combo_sub[['RawTreated']]
@@ -159,7 +157,6 @@ plotComboAgentFit <- function(combo, clines_drugs, gtf, plot_ID) {
     groups <- c("normalization_type")
     wide_cols <- c('x', 'x_std')
     dt_averaged <- gDRutils::flatten(dt_averaged, groups = groups, wide_cols = wide_cols)
-    
     
     mine <- min(c(0.0, min(na.omit(dt_averaged[,..field]))))
     maxe <- max(c(1.1, max(na.omit(dt_averaged[,..field]))))
@@ -223,7 +220,6 @@ plotComboAgentFit <- function(combo, clines_drugs, gtf, plot_ID) {
     groups <- c("normalization_type")
     wide_cols <- c('x')
     dt_smooth <- gDRutils::flatten(dt_smooth, groups = groups, wide_cols = wide_cols)
-    
     mine <- min(c(minF, min(na.omit(dt_smooth[,..field]))))
     maxe <- max(c(maxF, max(na.omit(dt_smooth[,..field])))) 
     limits <- c(mine,maxe)
@@ -237,48 +233,48 @@ plotComboAgentFit <- function(combo, clines_drugs, gtf, plot_ID) {
         coord_flip()
     }
     
-    
     #plot HSAExcess
     colors <- colorRampPalette(c("royalblue3", "royalblue1", "grey95" , "grey95" , "firebrick1", "firebrick3"))(51)
     dt_HSAExcess <- combo_sub[['HSAExcess']]
     dt_HSAExcess <- dt_HSAExcess[dt_HSAExcess$normalization_type==gtf$short]
-    mine <- min(c(-0.5, min(na.omit(dt_HSAExcess$x))))
-    maxe <- max(c(0.5, max(na.omit(dt_HSAExcess$x)))) 
+    tol <- max(c(abs(min(na.omit(dt_HSAExcess$excess))),abs(max(na.omit(dt_HSAExcess$excess)))))
+    mine <- min(c(-0.5, -tol))
+    maxe <- max(c(0.5, tol)) 
     limits <- c(mine,maxe)
     idx <- ((dt_HSAExcess$Concentration==0) | (dt_HSAExcess$Concentration_2==0))
-    dt_HSAExcess[idx]$x <- 0
+    dt_HSAExcess[idx]$excess <- 0
     #plot HSA Excess
     if ( 'HSAExcess' %in% plot_ID) {
-      p[[length(p)+1]]<- plotHeatMapCombo(dt_HSAExcess, 'x', limits, colors) +
+      p[[length(p)+1]]<- plotHeatMapCombo(dt_HSAExcess, 'excess', limits, colors) +
         labs(fill="HSA excess")
     }
     #plot HSA Excess swapped
     if ( 'HSAExcess_swapped' %in% plot_ID) {
-      p[[length(p)+1]]<- plotHeatMapCombo(dt_HSAExcess, 'x', limits, colors) +
+      p[[length(p)+1]]<- plotHeatMapCombo(dt_HSAExcess, 'excess', limits, colors) +
         labs(fill="HSA excess") +
         coord_flip()
     }
-    
     #plot BlissExcess
     dt_BlissExcess <- combo_sub[['BlissExcess']]
     dt_BlissExcess <- dt_BlissExcess[dt_BlissExcess$normalization_type==gtf$short]
-    mine <- min(c(-0.5, min(na.omit(dt_BlissExcess$x))))
-    maxe <- max(c(0.5, max(na.omit(dt_BlissExcess$x)))) 
+    
+    tol <- max(c(abs(min(na.omit(dt_BlissExcess$excess))),abs(max(na.omit(dt_BlissExcess$excess)))))
+    mine <- min(c(-0.70, -tol))
+    maxe <- max(c(0.70, tol)) 
     limits <- c(mine,maxe)
     idx <- ((dt_BlissExcess$Concentration==0) | (dt_BlissExcess$Concentration_2==0))
-    dt_BlissExcess[idx]$x <- 0
+    dt_BlissExcess[idx]$excess <- 0
     #plot Bliss Excess
     if ( 'BlissExcess' %in% plot_ID) {
-      p[[length(p)+1]]<- plotHeatMapCombo(dt_BlissExcess, 'x', limits, colors) +
+      p[[length(p)+1]]<- plotHeatMapCombo(dt_BlissExcess, 'excess', limits, colors) +
         labs(fill="Bliss excess") 
     }
     #plot Bliss Excess swapped
     if ( 'BlissExcess_swapped' %in% plot_ID) {
-      p[[length(p)+1]]<- plotHeatMapCombo(dt_BlissExcess, 'x', limits, colors) +
+      p[[length(p)+1]]<- plotHeatMapCombo(dt_BlissExcess, 'excess', limits, colors) +
         labs(fill="Bliss excess") +
         coord_flip()
     }
-    
     
     
     #Plot Isobologram: first plot smooth data with complicate spacing
@@ -316,6 +312,12 @@ plotComboAgentFit <- function(combo, clines_drugs, gtf, plot_ID) {
         dt_smooth$xmax <- (dt_smooth$x + dt_smooth$wr)
         dt_smooth$ymin <- (dt_smooth$y - dt_smooth$hd)
         dt_smooth$ymax <- (dt_smooth$y + dt_smooth$hu)
+        
+        labelx <- sort(unique(signif(10^dt_smooth$x,2)))
+        labelx[1] <- 0
+        labely <- sort(unique(signif(10^dt_smooth$y,2)))
+        labely[1] <- 0
+        
         colors_smooth <- viridis(50)
         p_smooth <- ggplot()  +
           geom_rect(data=dt_smooth, 
@@ -323,17 +325,19 @@ plotComboAgentFit <- function(combo, clines_drugs, gtf, plot_ID) {
                                ymin = 'ymin', ymax = 'ymax', 
                                fill = field)) +
           labs(title=unique(dt_smooth$CellLineName)) +
-          xlab(paste(unique(dt_smooth$DrugNamePlot),'uM'))+
-          ylab(paste(unique(dt_smooth$DrugNamePlot_2),'uM')) +
+          xlab(paste(unique(dt_smooth$DrugName),'(uM)'))+
+          ylab(paste(unique(dt_smooth$DrugName_2),'(uM)')) +
           scale_fill_gradientn(colours = colors_smooth, limits=limits) +
-          ggpubr::theme_pubr() +
+          ggpubr::theme_pubr()+
+          scale_x_continuous(breaks = sort(unique(dt_smooth$x)), labels = labelx) +
+          scale_y_continuous(breaks = sort(unique(dt_smooth$y)), labels = labely)+
           theme(text = element_text(size=7),
-                axis.text = element_text(size = 7),
-                axis.text.x = element_text(angle = 0, hjust = 0.5),
-                plot.title = element_text(hjust = 0.5),
-                panel.grid.major = element_blank(),
-                panel.grid.minor = element_blank(),
-                legend.position = "right"
+                  axis.text = element_text(size = 7),
+                  axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+                  plot.title = element_text(hjust = 0.5),
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  legend.position = "right"
           )
         
         #plot isobologram
@@ -352,13 +356,14 @@ plotComboAgentFit <- function(combo, clines_drugs, gtf, plot_ID) {
           colors_iso <- colorRampPalette(c("red", "purple"))(length(unique(dt_isob_proper$iso_level)))
           dt_isob_proper$iso_level <- factor(dt_isob_proper$iso_level)
           dt_isob_proper$iso_source <- factor(dt_isob_proper$iso_source)
+          
           #add isobologram to plot
+          xlist <- unique(dt_isob_proper$pos_x)[is.finite(unique(dt_isob_proper$pos_x))]
+          ylist <- unique(dt_isob_proper$pos_y)[is.finite(unique(dt_isob_proper$pos_y))]
           p_smooth <- p_smooth + 
             geom_line(data=dt_isob_proper, 
-                      aes(x = pos_y, y = pos_x, color = iso_level, linetype= iso_source) ,size = 2) +
-            scale_colour_manual(values = colors_iso) +
-            scale_x_continuous(expand = c(0, 0)) +
-            scale_y_continuous(expand = c(0, 0)) 
+                      aes(x = pos_y, y = pos_x, color = iso_level, linetype= iso_source) ,size = 1) +
+            scale_colour_manual(values = colors_iso) 
         }
         #add plot
         p[[length(p)+1]]<- p_smooth 

@@ -151,10 +151,24 @@ cobi_Doses_To_Use <- c("Cobi 20mg QOD" , "Cobi 20mg QD" ,"Cobi 40mg QD","Cobi 60
 
 doses <- c(belva_Doses_To_Use,cobi_Doses_To_Use)
 DDoses <- data.frame(DrugName = character(), dd = double(), dd_min = double(), dd_max = double(), title = character(),Dose_ID = character())
+DDoses_var <- data.frame(DrugName = character(), intrinsic_var = double(), extrinsic_var = double(),  title = character(),Dose_ID = character())
 for (i in 1:length(belva_Doses_To_Use)){
   belva_pk_filtered <- filter(belva_pk,Dose_ID == belva_Doses_To_Use[i])
   dose_mean <- mean(belva_pk_filtered$free_Concentration)
   low_q <- quantile(belva_pk_filtered$free_Concentration)
+  patient_IDs <- unique(belva_pk_filtered$ID)
+  patient_variances <- c()
+  patient_means <- c()
+  for (ID_val in patient_IDs){
+    patient_response <- filter(belva_pk_filtered, ID == ID_val)
+    patient_variances <- c(patient_variances,var(patient_response$free_Concentration)*(length(patient_response$free_Concentration)-1)/length(patient_response$free_Concentration))
+    patient_means <- c(patient_means,mean(patient_response$free_Concentration))
+  }
+  pop_var <- var(belva_pk_filtered$free_Concentration)*(length(belva_pk_filtered$free_Concentration)-1)/length(belva_pk_filtered$free_Concentration)
+  mean_var <- var(patient_means)*(length(patient_means)-1)/length(patient_means) 
+  print(mean(patient_variances)/pop_var)
+  print(mean_var/pop_var)
+  print(mean(patient_variances) + var(patient_means)*(length(patient_means)-1)/length(patient_means) - var(belva_pk_filtered$free_Concentration)*(length(belva_pk_filtered$free_Concentration)-1)/length(belva_pk_filtered$free_Concentration))
   dose_sd <- sd(belva_pk_filtered$free_Concentration)
   title_part <- strsplit(belva_Doses_To_Use[i]," ")
   title <- paste(title_part[[1]][2],"_",title_part[[1]][3],sep="")
@@ -168,6 +182,20 @@ for (i in 1:length(cobi_Doses_To_Use)){
   cobi_pk_filtered <- filter(cobi_pk,Dose_ID_2 == cobi_Doses_To_Use[i])
   dose_mean <- mean(cobi_pk_filtered$free_Concentration)
   dose_sd <- sd(cobi_pk_filtered$free_Concentration)
+  
+  patient_IDs <- unique(cobi_pk_filtered$ID)
+  patient_variances <- c()
+  patient_means <- c()
+  for (ID_val in patient_IDs){
+    patient_response <- filter(cobi_pk_filtered, ID == ID_val)
+    patient_variances <- c(patient_variances,var(patient_response$free_Concentration)*(length(patient_response$free_Concentration)-1)/length(patient_response$free_Concentration))
+    patient_means <- c(patient_means,mean(patient_response$free_Concentration))
+  }
+  pop_var <- var(cobi_pk_filtered$free_Concentration)*(length(cobi_pk_filtered$free_Concentration)-1)/length(cobi_pk_filtered$free_Concentration)
+  mean_var <- var(patient_means)*(length(patient_means)-1)/length(patient_means) 
+  print(mean(patient_variances)/pop_var)
+  print(mean_var/pop_var)
+  
   title_part <- strsplit(cobi_Doses_To_Use[i]," ")
   title <- paste(title_part[[1]][2],"_",title_part[[1]][3],sep="")
   DrugName <- cobi_pk_filtered$DrugName[1]

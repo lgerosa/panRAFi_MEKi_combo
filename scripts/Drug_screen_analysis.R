@@ -50,7 +50,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(combo$RawTreated, c('DrugName
 
 #decide which metrics to plot
 gtf <- list()
-choise_gtf <- 1
+choise_gtf <- 0
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -71,7 +71,8 @@ aqmlab <-c('IC50_uM', 'E_max', 'AUC')
 qmfunc <- c(log10, identity, identity)
 p <- list()
 for (i in 1:length(aqm)) {
-  print("test")
+  print(i)
+  
   #order according to mutations 
   sa_mut <- merge(sa, anno , by='CellLineName')
   sa_mut <- data.table::setorderv(sa_mut, c('BRAF_mut', "NRAS_mut",  aqm[i]))
@@ -126,6 +127,9 @@ dev.off()
 
 ### GENERATE COMBO METRIC FIGURES ###
 
+# Mutation status
+mut_df <- data.frame(row.names = c('BRAF_mut', "NRAS_mut","WT"),mean = c(0,0,0),median = c(0,0,0),std = c(0,0,0))
+
 #quantity used as quantification of drug effects 
 aqm <- c('HSAScore', 'BlissScore')
 p<- list()
@@ -143,6 +147,21 @@ for (i in 1:length(aqm)) {
   
   #order according to mutations 
   combo_met <- merge(combo_met, anno , by='CellLineName')
+  for (mutation in rownames(mut_df)){
+    if (mutation == "BRAF_mut"){
+      filt_combo_mut <- filter(combo_met,BRAF_mut=='yes',DrugName=='panRAFi_Belvarafenib')
+    } else if (mutation == "NRAS_mut"){
+      filt_combo_mut <- filter(combo_met,NRAS_mut=='yes',DrugName=='panRAFi_Belvarafenib')
+    } else{
+      filt_combo_mut <- filter(combo_met,BRAF_mut=='no',NRAS_mut=='no',DrugName=='panRAFi_Belvarafenib')
+    }
+    print(mutation)
+    print(filt_combo_mut)
+    print(filt_combo_mut[[gtf$long]])
+    mut_df[mutation,'mean'] <- mean(filt_combo_mut[[gtf$long]],na.rm = TRUE)
+    mut_df[mutation,'median'] <- median(filt_combo_mut[[gtf$long]],na.rm = TRUE)
+    mut_df[mutation,'std'] <- sd(filt_combo_mut[[gtf$long]],na.rm = TRUE)
+  }
   combo_met <- data.table::setorderv(combo_met, c('BRAF_mut', "NRAS_mut", gtf$long))
    
   #create field with both drugs

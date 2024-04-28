@@ -319,8 +319,8 @@ for (i in 1:nrow(uclines_drugs)){
       } else if (mixmax_fields[j]==2) {
         tope <- max(abs(c(min(na.omit(matv[,..field])), 
                           max(na.omit(matv[,..field])))))
-        mine <- min(c(-0.5,-tope))
-        maxe <- max(c(0.5, tope))
+        mine <- min(c(-1,-tope))
+        maxe <- max(c(1, tope))
         cdotdose <- 'black'
       }
       limits <- c(mine,maxe)

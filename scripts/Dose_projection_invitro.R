@@ -516,8 +516,8 @@ for (i in 1:nrow(uclines_drugs)){
   
   tope <- max(abs(c(min(bliss_smooth[[paste(gtf$short,"_excess",sep="")]],na.rm = TRUE), 
                           max(bliss_smooth[[paste(gtf$short,"_excess",sep="")]],na.rm = TRUE))))
-  max_val <- max(tope,.5)
-  min_val <- min(-tope,-.5)
+  max_val <- max(tope,1)
+  min_val <- min(-tope,-1)
   
   pall_hm[[length(pall_hm)+1]] <- ggplot(bliss_long, aes(x = Var1, y = Var2))+
     geom_tile(aes(fill=value))+xlab(drug_1) +
@@ -639,8 +639,8 @@ for (i in 1:nrow(dt_dd)){
       } else if (mixmax_fields[j]==2) {
         tope <- max(abs(c(min(na.omit(matv[,..field])), 
                           max(na.omit(matv[,..field])))))
-        mine <- min(c(-0.5,-tope))
-        maxe <- max(c(0.5, tope))
+        mine <- min(c(-1,-tope))
+        maxe <- max(c(1, tope))
         cdotdose <- 'black'
       }
       
@@ -746,8 +746,8 @@ for (i in 1:nrow(uclines_drugs)){
       } else if (mixmax_fields[j]==2) {
         tope <- max(abs(c(min(na.omit(matv[,..field])), 
                           max(na.omit(matv[,..field])))))
-        mine <- min(c(-0.5,-tope))
-        maxe <- max(c(0.5, tope))
+        mine <- min(c(-1,-tope))
+        maxe <- max(c(1, tope))
         cdotdose <- 'black'
       }
       limits <- c(mine,maxe)
@@ -865,8 +865,8 @@ for (i in 1:nrow(uclines_drugs)){
       } else if (mixmax_fields[j]==2) {
         tope <- max(abs(c(min(na.omit(matv[,..field])), 
                           max(na.omit(matv[,..field])))))
-        mine <- min(c(-0.5,-tope))
-        maxe <- max(c(0.5, tope))
+        mine <- min(c(-1,-tope))
+        maxe <- max(c(1, tope))
         cdotdose <- 'black'
       }
       limits <- c(mine,maxe)

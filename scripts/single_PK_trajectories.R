@@ -58,17 +58,17 @@ cobi_pk <- rename(cobi_pk, Dose_ID_2 = TRT01P)
 cobi_pk <- filter(cobi_pk,time <= max(time_plot_range), time >= min(time_plot_range))
 
 # specify which doses to use
-belva_Doses_To_Use <- c("Belvarafenib 50mg QD","Belvarafenib 100mg BID" ,"Belvarafenib 200mg QD","Belvarafenib 400mg BID")
+belva_Doses_To_Use <- c("Belvarafenib 50mg QD","Belvarafenib 100mg BID" ,"Belvarafenib 200mg BID","Belvarafenib 400mg BID")
 cobi_Doses_To_Use <- c("Cobi 20mg QOD" , "Cobi 20mg QD" ,"Cobi 40mg QD","Cobi 60mg QD")
 all_dose_combo <- expand.grid(belva_Doses_To_Use, cobi_Doses_To_Use,stringsAsFactors = FALSE)
 belva_Doses_To_Use <- all_dose_combo$Var1
 cobi_Doses_To_Use <- all_dose_combo$Var2
 
 # specify which cell lines to use
-cellLinesToUse <- c("A-375", "IPC-298")
-#cellLinesToUse <- c("MEL-JUSO",  "SK-MEL-2",  "SK-MEL-30")
+#cellLinesToUse <- c("A-375", "IPC-298")
+cellLinesToUse <- c("MEL-JUSO",  "SK-MEL-2",  "SK-MEL-30")
 
-unique_cld_color <- TRUE
+unique_cld_color <- FALSE
 if (unique_cld_color){
   cell_line_color_grad <- hash()
   cell_line_color_grad[["A-375"]] <- c("#093c93","#4284f3","#8ab3f8")
@@ -399,7 +399,7 @@ min_effect <- min(single_agent_project_df$Combo,projected_doses$Combo)
 cplot <- list()
 for (j in 1:dose_count){
   projected_doses_filtered <- filter(projected_doses,projected_doses$Dose_ID==belva_Doses_To_Use[j],projected_doses$Dose_ID_2==cobi_Doses_To_Use[j],time > 528, time <= 528+full_cycle_time[j])
- 
+  
   patients_to_map <- unique(projected_doses_filtered$ID)[violin_patients]
   patients_to_map <- na.omit(patients_to_map)
   projected_doses_filtered <- filter(projected_doses_filtered,projected_doses_filtered$ID %in% patients_to_map)
@@ -454,7 +454,7 @@ print(grid.arrange(grobs = cplot, ncol=ncol))
 dev.off()
 
 
-  
+
 ## Generates dose pair Bliss excess violin plots
 dose_response <- dose_response[order( dose_response$ID, dose_response$time ),]
 projected_doses$BlissExcess <- projected_doses$Bliss - projected_doses$Combo
@@ -471,10 +471,10 @@ for (j in 1:dose_count){
   bplot[[length(bplot)+1]] <- ggplot() +ggtitle(sprintf("%s\n%s",belva_Doses_To_Use[j],cobi_Doses_To_Use[j]))+ geom_hline(yintercept=0, linetype="dashed", color = "black") + ylim(min(min_effect,0),max_effect+.01)+ theme_classic() 
   for (cell_line_name in keys(cell_line_color_grad)){
     projected_doses_sc_filtered <- filter(projected_doses_filtered,CellLineName == cell_line_name)
-  bplot[[length(bplot)]] <- bplot[[length(bplot)]] +geom_quasirandom(data=projected_doses_sc_filtered, aes(x = CellLineName, y = BlissExcess,color = time),bandwidth = bandwidth)+scale_color_gradientn(colours = cell_line_color_grad[[cell_line_name]])
-  if (unique_cld_color){
-    bplot[[length(bplot)]] <- bplot[[length(bplot)]]+new_scale_color()
-  }
+    bplot[[length(bplot)]] <- bplot[[length(bplot)]] +geom_quasirandom(data=projected_doses_sc_filtered, aes(x = CellLineName, y = BlissExcess,color = time),bandwidth = bandwidth)+scale_color_gradientn(colours = cell_line_color_grad[[cell_line_name]])
+    if (unique_cld_color){
+      bplot[[length(bplot)]] <- bplot[[length(bplot)]]+new_scale_color()
+    }
   }
 }
 
@@ -524,8 +524,8 @@ for (j in 1:dose_count){
   patients_to_map <- patient_ID_to_plot[[toString(j)]]
   all_dose_values <- dplyr::select(filter(projected_doses_filtered,projected_doses_filtered$ID %in% patients_to_map),free_Concentration,free_Concentration_2)
   if (j == 1){
-  projected_doses_min <- min(all_dose_values,na.rm=TRUE)
-  projected_doses_max <- max(all_dose_values,na.rm=TRUE)
+    projected_doses_min <- min(all_dose_values,na.rm=TRUE)
+    projected_doses_max <- max(all_dose_values,na.rm=TRUE)
   } else{
     projected_doses_min <- min(all_dose_values,projected_doses_min,na.rm=TRUE)
     projected_doses_max <- max(all_dose_values,projected_doses_max,na.rm=TRUE)
@@ -544,7 +544,7 @@ for (j in 1:dose_count){
                                       colour = "gray85") + theme_classic() 
     ) + xlab("Time (hr)") + ylab(expression(paste("Free Concentration (",mu,"M)")))
     pkplot[[patient_ID_ind+(j-1)*length(patients_to_map)]]  <- pkplot[[patient_ID_ind+(j-1)*length(patients_to_map)]] + geom_path(data = projected_curve,aes(x=time, y=free_Concentration), linewidth = 1) +ggtitle(sprintf("Patient ID: %d\n%s\n%s",patients_to_map[patient_ID_ind],belva_Doses_To_Use[j],cobi_Doses_To_Use[j])) + theme_classic() + scale_y_log10(limits = c(projected_doses_min,projected_doses_max))
-    }
+  }
 }
 
 file_res <- 'PK_trajectories.pdf'

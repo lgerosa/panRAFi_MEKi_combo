@@ -58,7 +58,7 @@ cobi_pk <- rename(cobi_pk, Dose_ID_2 = TRT01P)
 cobi_pk <- filter(cobi_pk,time <= max(time_plot_range), time >= min(time_plot_range))
 
 # specify which doses to use
-belva_Doses_To_Use <- c("Belvarafenib 50mg QD","Belvarafenib 100mg BID" ,"Belvarafenib 200mg QD","Belvarafenib 400mg BID")
+belva_Doses_To_Use <- c("Belvarafenib 50mg QD","Belvarafenib 100mg BID" ,"Belvarafenib 200mg BID","Belvarafenib 400mg BID")
 cobi_Doses_To_Use <- c("Cobi 20mg QOD" , "Cobi 20mg QD" ,"Cobi 40mg QD","Cobi 60mg QD")
 all_dose_combo <- expand.grid(belva_Doses_To_Use, cobi_Doses_To_Use,stringsAsFactors = FALSE)
 belva_Doses_To_Use <- all_dose_combo$Var1
@@ -146,7 +146,7 @@ dose_response_filtered <- filter(dose_response,dose_response$Dose_ID_2 %in% cobi
 dose_response_filtered <- dose_response_filtered[order( dose_response_filtered$ID, dose_response_filtered$time ),]
 
 # specify which doses to use
-belva_Doses_To_Use <- c("Belvarafenib 50mg QD","Belvarafenib 200mg QD","Belvarafenib 100mg BID" ,"Belvarafenib 400mg BID")
+belva_Doses_To_Use <- c("Belvarafenib 50mg QD","Belvarafenib 100mg BID" ,"Belvarafenib 200mg BID" ,"Belvarafenib 400mg BID")
 cobi_Doses_To_Use <- c("Cobi 20mg QOD" , "Cobi 20mg QD" ,"Cobi 40mg QD","Cobi 60mg QD")
 
 doses <- c(belva_Doses_To_Use,cobi_Doses_To_Use)

@@ -16,6 +16,8 @@ The following list contains links to the scripts used to generate figures found 
   * 3a-3c [[script - bliss_heatmaps_Belva_Cobi_MARM2_BRAF_V600E.ipynb](scripts/model_simulation_and_plotting/Bliss_Heatmaps/bliss_heatmaps_Belva_Cobi_MARM2_BRAF_V600E.ipynb),[script - bliss_heatmaps_Belva_Cobi_NRAS_Q61_CRAF_optional.ipynb](scripts/model_simulation_and_plotting/Bliss_Heatmaps/bliss_heatmaps_Belva_Cobi_NRAS_Q61_CRAF_optional.ipynb)]
   * 3a,3c [[figure - Scaled_Belva_Cobi_SS_BRAF_V600E.svg](figures/Model_predicted_synergy/Scaled_Belva_Cobi_SS_BRAF_V600E.svg)]
   * 3b,3c [[figure - Scaled_Belva_Cobi_SS_NRAS_Q61_w_CRAF_feedback.svg](figures/Model_predicted_synergy/Scaled_Belva_Cobi_SS_NRAS_Q61_w_CRAF_feedback.svg)]
+  * 3c [[figure - A375_IF.png](figures/Experimental_dose_response/A375_IF.png)]
+  * 3c [[figure - IPC298_IF.png](figures/Experimental_dose_response/IPC298_IF.png)]
 * Figure 4
   * 4a,4b [[script - Dose_projection_invitro.R](scripts/Dose_projection_invitro.R)]
   * 4a,4b [[figure - Heatmaps_Blank_GR_FBS_10.pdf](figures/Dose_projections/Heatmaps_Blank_GR_FBS_10.pdf),[figure - DDose.pdf](figures/Dose_projections/DDose.pdf),[figure - Heatmaps_DA_all_doses_in_one_GR_FBS_10.pdf](figures/Dose_projections/Heatmaps_DA_all_doses_in_one_GR_FBS_10.pdf),[figure - Dose_Projection_Heatmaps_GR_FBS_10.pdf](figures/Dose_projections/Dose_Projection_Heatmaps_GR_FBS_10.pdf)]

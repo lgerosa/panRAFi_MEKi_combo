@@ -50,7 +50,7 @@ message('Drug combos: ', nrow(unique(dplyr::select(combo$RawTreated, c('DrugName
 
 #decide which metrics to plot
 gtf <- list()
-choise_gtf <- 0
+choise_gtf <- 1
 if (choise_gtf == 0){
   gtf$long <- 'RelativeViability'
   gtf$short <- 'RV'
@@ -65,27 +65,32 @@ aqm <- c('%s_gDR_xc50', '%s_gDR_x_max', '%s_gDR_x_mean')
 for (i in 1:length(aqm)){
   aqm[i] <- sprintf(aqm[i], gtf$short)
 }
+
+# Mutation status
+mut_df <- data.frame(row.names = c('BRAF_mut', "NRAS_mut","WT"),Belva_mean = c(0,0,0),Belva_std = c(0,0,0),Vemu_mean = c(0,0,0),Vemu_std = c(0,0,0),Cobi_mean = c(0,0,0),Cobi_std = c(0,0,0))
+
 #name plot for quantification of drug effects
 aqmlab <-c('IC50_uM', 'E_max', 'AUC')
 #scale of y axis
 qmfunc <- c(log10, identity, identity)
 p <- list()
 for (i in 1:length(aqm)) {
-  print(i)
-  
   #order according to mutations 
   sa_mut <- merge(sa, anno , by='CellLineName')
   sa_mut <- data.table::setorderv(sa_mut, c('BRAF_mut', "NRAS_mut",  aqm[i]))
-  print("test")
+  
   #extract metrics to plot in matrix format
   sa_mat <- data.table::dcast(sa_mut, 
-                                  factor(CellLineName, levels =unique(CellLineName)) ~  factor(DrugName), 
-                                  value.var = aqm[i])
+                              factor(CellLineName, levels =unique(CellLineName)) ~  factor(DrugName), 
+                              value.var = aqm[i])
+  
   #order drugs
   sa_mat <- sa_mat[, c('CellLineName', 'MEKi_Cobimetinib', 'panRAFi_Belvarafenib', 'BRAFi_Vemurafenib'), drop=FALSE ]
   
+  
   #make it a data.frame or pheatmap messes up annotations
   sa_mat <- as.data.frame(sa_mat)
+  
   rownames(sa_mat)<- sa_mat$CellLineName
   sa_mat <- dplyr::select(sa_mat, -c('CellLineName'))
   #remove columns and rows that are all NAN
@@ -100,6 +105,25 @@ for (i in 1:length(aqm)) {
   colnames(t_sa_mat) <- rownames(sa_mat)
   rownames(t_sa_mat) <- colnames(sa_mat)
   
+  for (mutation in rownames(mut_df)){
+    if (mutation == "BRAF_mut"){
+      anno_mut <- filter(anno,BRAF_mut=='yes')
+      sa_mat_filter <- filter(sa_mat,row.names(sa_mat) %in% anno_mut$CellLineName)
+    } else if (mutation == "NRAS_mut"){
+      anno_mut <- filter(anno,NRAS_mut=='yes')
+      sa_mat_filter <- filter(sa_mat,row.names(sa_mat) %in% anno_mut$CellLineName)
+    } else{
+      anno_mut <- filter(anno,BRAF_mut=='no',NRAS_mut=='no')
+      sa_mat_filter <- filter(sa_mat,row.names(sa_mat) %in% anno_mut$CellLineName)
+    }
+    mut_df[mutation,'Belva_mean'] <- mean(sa_mat_filter$panRAFi_Belvarafenib,na.rm = TRUE)
+    mut_df[mutation,'Belva_std'] <- sd(sa_mat_filter$panRAFi_Belvarafenib,na.rm = TRUE)
+    mut_df[mutation,'Vemu_mean'] <- mean(sa_mat_filter$BRAFi_Vemurafenib,na.rm = TRUE)
+    mut_df[mutation,'Vemu_std'] <- sd(sa_mat_filter$BRAFi_Vemurafenib,na.rm = TRUE)
+    mut_df[mutation,'Cobi_mean'] <- mean(sa_mat_filter$MEKi_Cobimetinib,na.rm = TRUE)
+    mut_df[mutation,'Cobi_std'] <- sd(sa_mat_filter$MEKi_Cobimetinib,na.rm = TRUE)
+  }
+  write.csv(mut_df,file.path(cwd, data_dir, 'Drug_screen','Statistical_Analysis', sprintf("feature_%s_metric_%s.csv",aqm[i],gtf$short)))
   #plot heatmap
   breaks <- seq(from=min(na.omit(sa_mat)), to=1.0, length.out=50)
   hmcol <- rev(colorRampPalette(c("firebrick2", "white" ))(51))
@@ -112,7 +136,13 @@ for (i in 1:length(aqm)) {
                               annotation_colors= col_anno,
                               main= paste(aqmlab[i], gtf$long)
   )
+  
+  # Generates mean, median, and deviation for each mutation context
+  
+  
+  
 }  
+print(mut_df)
 
 #save heatmaps
 #file_res <- sprintf('sa_metrics_heatmaps_%s.pdf', gtf$short)
@@ -162,8 +192,9 @@ for (i in 1:length(aqm)) {
     mut_df[mutation,'median'] <- median(filt_combo_mut[[gtf$long]],na.rm = TRUE)
     mut_df[mutation,'std'] <- sd(filt_combo_mut[[gtf$long]],na.rm = TRUE)
   }
+  write.csv(mut_df,file.path(cwd, data_dir, 'Drug_screen','Statistical_Analysis', sprintf("feature_%s_metric_%s.csv",aqm[i],gtf$short)))
   combo_met <- data.table::setorderv(combo_met, c('BRAF_mut', "NRAS_mut", gtf$long))
-   
+  
   #create field with both drugs
   combo_met$Drugs_combo_name <- paste(combo_met$DrugNamePlot, combo_met$DrugNamePlot_2, sep=' x ')
   #dcast to matrix format the HSA score
@@ -218,11 +249,11 @@ dev.off()
 
 #plot selected lines
 cell_lines_sel <- c( 
-                    #'A-375', # BRAF V600E
-                    'WM−266−4', # BRAF V600E
-                    'SK-MEL-28',# BRAF V600E
-                    'MEL-JUSO', #, # NRAS Q61
-                    'SK-MEL-2' # NRAS Q61
+  #'A-375', # BRAF V600E
+  'WM−266−4', # BRAF V600E
+  'SK-MEL-28',# BRAF V600E
+  'MEL-JUSO', #, # NRAS Q61
+  'SK-MEL-2' # NRAS Q61
 )
 
 #plot all lines
@@ -236,7 +267,7 @@ nplot_ID <- length(plot_ID)
 #select combinations of cell lines and drugs to plot (sort by cell line)
 clines_drugs <- unique(dplyr::select( combo[['Averaged']], c('CellLineName', 'DrugName', 'DrugName_2')))
 clines_drugs <- clines_drugs[ clines_drugs$DrugName=='panRAFi_Belvarafenib' &
-                              clines_drugs$DrugName_2=='MEKi_Cobimetinib', ]
+                                clines_drugs$DrugName_2=='MEKi_Cobimetinib', ]
 
 ord_cols <- c('DrugName', 'DrugName_2','CellLineName')
 clines_drugs <- data.table::setorderv(clines_drugs, ord_cols)
@@ -263,7 +294,7 @@ for (i in 1:length(clines)){
     combo_sub[[aID]] <- combo[[aID]][idx]
   }  
   
-
+  
   #use a coloring schema and min value different between GR and RV
   if (gtf$long=='GRvalue'){
     colors <-  c(rev(rocket(60)[10:60]), viridis(50))
@@ -285,7 +316,7 @@ for (i in 1:length(clines)){
   maxe <- max(c(maxF, max(na.omit(dt_smooth[,..field])))) 
   limits <- c(mine,maxe)
   p[[length(p)+1]]<- plotHeatMapCombo(dt_smooth, field, limits, colors)
-
+  
   #plot Bliss Excess
   field <- sprintf('%s_excess', gtf$short)
   dt_smooth <- combo_sub[['BlissExcess']]
